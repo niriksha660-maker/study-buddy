@@ -1,0 +1,3019 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">  <title>Sbeta · ..STUDY BUDDYYY.. — Study Planner & Doubt Solver</title>
+<meta name="theme-color" content="#0b1020">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StudyBuddy">
+<link id="manifest-link" rel="manifest">
+<link id="apple-icon" rel="apple-touch-icon">
+<style>
+:root{
+  --bg:#0b0e15; --panel:#131a29; --panel2:#0e1420; --border:#232c42; --border2:#2d3854;
+  --text:#e8edf7; --muted:#8b94ab; --accent:#6c8cff; --accent2:#8b6cff;
+  --green:#2dd4a0; --amber:#f5b04c; --red:#f26d6d; --cyan:#4cc9f0;
+  --radius:14px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgba(108,140,255,.14), transparent 60%),
+    radial-gradient(700px 500px at -10% 110%, rgba(139,108,255,.10), transparent 60%),
+    var(--bg);
+  color:var(--text);
+  font:14px/1.5 ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#273049;border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+
+.app{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
+.sidebar{
+  position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:6px;
+  padding:18px 12px;border-right:1px solid var(--border);background:rgba(14,19,32,.6);backdrop-filter:blur(6px);
+}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 16px}
+.brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#5b7cfa,#a75bfa);
+  display:grid;place-items:center;font-size:14px;font-weight:800;letter-spacing:.5px;box-shadow:0 4px 18px rgba(108,140,255,.35)}
+.brand b{font-size:14px;letter-spacing:.3px;white-space:nowrap}
+.brand small{display:block;color:var(--muted);font-size:10.5px;font-weight:600;letter-spacing:.6px;text-transform:uppercase}
+.nav-btn{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:9px 10px;border-radius:10px;
+  background:transparent;border:1px solid transparent;color:var(--muted);cursor:pointer;font:inherit;font-weight:600;
+}
+.nav-btn:hover{color:var(--text);background:#161e30}
+.nav-btn.active{color:var(--text);background:#1a2338;border-color:var(--border2);box-shadow:inset 3px 0 0 var(--accent)}
+.nav-btn .ico{width:20px;text-align:center}
+.side-foot{margin-top:auto;padding:10px 8px;color:var(--muted);font-size:11.5px;border-top:1px solid var(--border)}
+.side-foot .row{display:flex;justify-content:space-between;margin:3px 0}
+
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{
+  position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:14px;
+  padding:14px 26px;border-bottom:1px solid var(--border);background:rgba(11,14,21,.82);backdrop-filter:blur(8px);
+}
+.topbar h1{margin:0;font-size:17px}
+.topbar .spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:99px;background:#161e30;
+  border:1px solid var(--border2);font-weight:600;font-size:12.5px;white-space:nowrap}
+.pill.warn{color:var(--amber);border-color:rgba(245,176,76,.35)}
+.pill.good{color:var(--green);border-color:rgba(45,212,160,.35)}
+.pill.acc{color:#aebfff;border-color:rgba(108,140,255,.4)}
+.content{padding:22px 26px 60px;max-width:1180px;width:100%}
+.view-panel{display:none}
+.view-panel.active{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+.card{background:linear-gradient(180deg,#141b2c,#111726);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.card + .card{margin-top:16px}
+.card h2{margin:0 0 4px;font-size:15px}
+.card h3{margin:0 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.sub{color:var(--muted);font-size:12.5px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.row{display:flex;align-items:center;gap:10px}
+@media(max-width:480px){ .row{flex-wrap:wrap} .row .grow{min-width:200px} }
+.row.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;border-radius:10px;cursor:pointer;
+  background:#1c2438;border:1px solid var(--border2);color:var(--text);font:inherit;font-weight:600;white-space:nowrap;
+  transition:background .12s,transform .06s;
+}
+.btn:hover{background:#232d47}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:linear-gradient(135deg,#5b7cfa,#7c5bfa);border-color:transparent;box-shadow:0 4px 16px rgba(108,140,255,.3)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.green{background:linear-gradient(135deg,#1fae82,#17a06f);border-color:transparent}
+.btn.danger{background:transparent;border-color:rgba(242,109,109,.4);color:var(--red)}
+.btn.danger:hover{background:rgba(242,109,109,.12)}
+.btn.ghost{background:transparent;border-color:var(--border2);color:var(--muted)}
+.btn.ghost:hover{color:var(--text)}
+.btn.sm{padding:5px 10px;font-size:12.5px;border-radius:8px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+input,select,textarea{
+  background:#0d1424;border:1px solid #26304c;border-radius:10px;color:var(--text);
+  padding:8px 11px;font:inherit;outline:none;width:100%;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,140,255,.15)}
+textarea{resize:vertical;min-height:60px}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);font-weight:600}
+input[type=range]{padding:0;accent-color:var(--accent)}
+input[type=date]{color-scheme:dark}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none}
+
+.bar{height:8px;background:#1b2438;border-radius:99px;overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s ease}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:99px;font-size:11.5px;font-weight:700;letter-spacing:.2px}
+.tag{display:inline-block;padding:1px 8px;border-radius:6px;background:#1b2438;border:1px solid var(--border2);color:var(--muted);font-size:11px;font-weight:600}
+
+.stat{padding:14px 16px;border-radius:12px;background:#131a2b;border:1px solid var(--border)}
+.stat .k{color:var(--muted);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.stat .v{font-size:24px;font-weight:800;margin-top:2px}
+.stat .s{color:var(--muted);font-size:11.5px}
+
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;background:#121a2b;border:1px solid var(--border)}
+.item:hover{border-color:var(--border2)}
+.item.done{opacity:.5}
+.item.done .title{text-decoration:line-through}
+.item .title{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .meta{color:var(--muted);font-size:11.5px;white-space:nowrap}
+
+.empty{padding:34px 18px;text-align:center;color:var(--muted);border:1.5px dashed var(--border2);border-radius:12px}
+.empty .big{font-size:30px;margin-bottom:6px}
+
+.hero{background:linear-gradient(135deg,rgba(108,140,255,.16),rgba(139,108,255,.08));border-color:rgba(108,140,255,.35)}
+
+/* chat */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 170px);min-height:420px}
+.chat-log{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:6px 4px}
+.msg{max-width:78%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.55}
+.msg.user{align-self:flex-end;background:linear-gradient(135deg,#4d6ef0,#6c4df0);border-bottom-right-radius:4px}
+.msg.coach{align-self:flex-start;background:#161e30;border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg .t{font-size:10.5px;color:var(--muted);margin-top:6px}
+.msg b{color:#fff}
+.msg .msg-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.goal-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:#101828;border:1px solid var(--border);margin-top:6px;cursor:pointer}
+.chat-input{display:flex;gap:10px;padding-top:12px}
+.chiprow{display:flex;gap:8px;flex-wrap:wrap;padding-top:10px}
+.chipbtn{padding:6px 12px;border-radius:99px;background:#161e30;border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:12px;font-weight:600}
+.chipbtn:hover{color:var(--text);border-color:var(--accent)}
+
+/* pomodoro */
+.pomo-grid{display:grid;grid-template-columns:340px 1fr;gap:16px}
+@media(max-width:900px){.pomo-grid{grid-template-columns:1fr}}
+.pomo-face{display:flex;flex-direction:column;align-items:center;gap:6px;padding:24px 18px}
+.ring-wrap{position:relative;width:250px;height:250px}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:#1c2438;stroke-width:13}
+.ring-fg{fill:none;stroke:url(#ringGrad);stroke-width:13;stroke-linecap:round;transition:stroke-dashoffset .3s linear}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.ring-center .time{font-size:46px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:1px}
+.ring-center .mode{color:var(--muted);font-weight:700;text-transform:uppercase;font-size:11.5px;letter-spacing:1.5px}
+.dotrow{display:flex;gap:7px;margin-top:8px}
+.dot{width:10px;height:10px;border-radius:99px;background:#232c44}
+.dot.on{background:var(--green)}
+
+/* flashcards */
+.study-card{position:relative;perspective:1200px;height:300px;cursor:pointer;margin-bottom:14px}
+.study-card .face{
+  position:absolute;inset:0;backface-visibility:hidden;border-radius:16px;border:1px solid var(--border2);
+  background:linear-gradient(160deg,#182136,#121a2c);display:flex;align-items:center;justify-content:center;
+  padding:28px;text-align:center;font-size:18px;font-weight:600;white-space:pre-wrap;overflow:auto;transition:transform .35s;
+}
+.study-card .back{transform:rotateY(180deg);background:linear-gradient(160deg,#152a24,#12231e);border-color:rgba(45,212,160,.35)}
+.study-card.flipped .front{transform:rotateY(180deg)}
+.study-card.flipped .back{transform:rotateY(360deg)}
+
+/* decks */
+.deckgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.deckcard{padding:14px;border-radius:12px;background:#131a2b;border:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.deckcard:hover{border-color:var(--border2)}
+
+/* doubts */
+.db-ans{border-left:3px solid var(--accent);background:#101a2e;border-radius:0 10px 10px 0;margin-top:10px}
+.db-q{font-weight:700;font-size:14px}
+.db-thumb{width:86px;height:86px;object-fit:cover;border-radius:10px;border:1px solid var(--border2);cursor:zoom-in;background:#0d1322}
+/* chat thread (WhatsApp-style) */
+.db-card{position:relative}
+.db-thread{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.db-msg{display:flex;flex-direction:column;max-width:88%;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.db-msg.left{align-self:flex-start;align-items:flex-start}
+.db-msg.me{align-self:flex-end;align-items:flex-end}
+.db-bubble{padding:9px 12px;border-radius:14px;background:#161e30;border:1px solid var(--border2);font-size:13px;line-height:1.5;color:#c8d2e8;word-break:break-word}
+.db-msg.q .db-bubble{background:#181f33;border-bottom-left-radius:4px}
+.db-msg.coach .db-bubble{background:#101a2e;border-color:rgba(108,140,255,.4);border-bottom-left-radius:4px}
+.db-msg.me .db-bubble{background:#0f241d;border-color:rgba(45,212,160,.4);border-bottom-right-radius:4px}
+.db-msg.me.teach .db-bubble{background:#241d0f;border-color:rgba(245,185,66,.45)}
+.db-bmeta{display:flex;gap:6px;align-items:center;font-size:10.5px;color:var(--muted);margin-bottom:3px}
+.db-msg.me .db-bmeta{flex-direction:row-reverse}
+.db-bmeta .who{font-weight:700;font-size:11.5px;color:var(--text)}
+.db-msg.coach .db-bmeta .who{color:var(--accent)}
+.db-msg.me .db-bmeta .who{color:var(--green)}
+.db-msg.me.teach .db-bmeta .who{color:var(--amber)}
+.db-ava{width:22px;height:22px;border-radius:99px;display:inline-grid;place-items:center;font-size:10.5px;font-weight:800;color:#0b1020;flex:none}
+.db-bimg{max-width:240px;max-height:210px;width:auto;border-radius:10px;display:block;margin-top:6px;cursor:zoom-in;border:1px solid var(--border2);background:#0d1322}
+.db-reactrow{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;align-items:center}
+.db-rchip{border:1px solid var(--border2);background:#161e30;border-radius:99px;padding:1px 8px;font-size:11.5px;cursor:pointer;color:var(--text);line-height:1.7}
+.db-rchip:hover{border-color:var(--accent)}
+.db-rchip.on{background:rgba(108,140,255,.25);border-color:var(--accent)}
+.db-rbar{display:inline-flex;gap:3px;background:#131a2b;border:1px solid var(--border2);border-radius:99px;padding:2px 6px}
+.db-poll{min-width:230px}
+.db-poll .pq{font-weight:700;color:var(--text);margin-bottom:6px}
+.db-poll .pv{font-size:10.5px;color:var(--muted);margin-top:5px}
+.db-popt{position:relative;display:block;width:100%;text-align:left;border:1px solid var(--border2);background:#131a2b;border-radius:9px;padding:7px 10px;margin-top:5px;cursor:pointer;color:#c8d2e8;font-size:12.5px;overflow:hidden}
+.db-popt:hover{border-color:var(--accent)}
+.db-popt .bar{position:absolute;top:0;left:0;bottom:0;background:rgba(108,140,255,.16)}
+.db-popt.mine .bar{background:rgba(45,212,160,.22)}
+.db-popt .lbl{position:relative;display:flex;justify-content:space-between;gap:10px}
+.db-popt .pct{color:var(--muted);font-weight:700;white-space:nowrap}
+.db-popt .tick{color:var(--green);font-weight:800}
+.db-inrow{display:flex;gap:6px;align-items:center;margin-top:12px}
+.db-ebtn{width:34px;height:34px;flex:none;display:grid;place-items:center;border-radius:9px;background:#1a2338;border:1px solid var(--border2);cursor:pointer;font-size:15px}
+.db-ebtn:hover{border-color:var(--accent)}
+.db-ebtn.act{border-color:var(--accent)}
+.db-emoji-pop{position:absolute;bottom:48px;right:8px;z-index:20;display:grid;grid-template-columns:repeat(6,1fr);gap:2px;background:#131a2b;border:1px solid var(--border2);border-radius:12px;padding:8px;box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.db-eb{background:none;border:none;font-size:17px;cursor:pointer;padding:3px 5px;border-radius:7px;line-height:1.3}
+.db-eb:hover{background:#1e2740}
+.db-pend{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11.5px;color:var(--muted)}
+.db-pend img{width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--border2)}
+/* library attachments (photos & PDFs) */
+.lib-atts{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.lib-att{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#101a2e;border:1px solid var(--border2);border-radius:10px;font-size:12.5px;color:#c8d2e8}
+.lib-att .ic{font-size:18px}
+.lib-att .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib-att .sz{color:var(--muted);font-size:11px;flex-shrink:0}
+.lib-att button{flex-shrink:0}
+.lib-afile{width:34px;height:34px;object-fit:cover;border-radius:8px;border:1px solid var(--border2);cursor:zoom-in;background:#0d1322;flex-shrink:0}
+#m-latts .lib-att{background:#161e30}
+.block-tools{display:flex;gap:4px}
+.iconbtn{width:26px;height:26px;display:grid;place-items:center;border-radius:7px;background:#1a2338;border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:12px}
+.iconbtn:hover{color:var(--text)}
+.rev-card{padding:14px 16px;border-radius:12px;background:#131a2b;border:1px solid var(--border);margin-bottom:10px;cursor:pointer}
+.rev-card .lbl{font-weight:700;margin-bottom:4px}
+.rev-card .body{filter:blur(6px);user-select:none;transition:filter .2s;color:#c8d2e8;white-space:pre-wrap}
+.rev-card.revealed .body{filter:none;user-select:auto}
+
+/* modal & toast */
+#modal-backdrop{position:fixed;inset:0;background:rgba(5,8,14,.66);backdrop-filter:blur(3px);display:none;z-index:50;align-items:flex-start;justify-content:center;padding:7vh 16px}
+#modal-backdrop.open{display:flex}
+.modal{background:#131a2b;border:1px solid var(--border2);border-radius:16px;padding:20px;width:100%;max-width:520px;max-height:82vh;overflow:auto;box-shadow:0 24px 60px rgba(0,0,0,.5);animation:fade .15s ease}
+.modal.wide{max-width:720px}
+.modal h3{margin:0 0 12px;font-size:16px}
+#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:#1c2438;border:1px solid var(--border2);
+  color:var(--text);padding:10px 18px;border-radius:12px;font-weight:600;opacity:0;pointer-events:none;transition:all .25s;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.chart{display:flex;align-items:flex-end;gap:8px;height:110px;padding-top:6px}
+.chart .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0}
+.chart .stick{width:100%;max-width:34px;border-radius:6px 6px 3px 3px;background:linear-gradient(180deg,var(--accent),#3b55c9);min-height:2px}
+.chart .col.today .stick{background:linear-gradient(180deg,var(--green),#149469)}
+.chart .lbl{font-size:10px;color:var(--muted);font-weight:700}
+
+#print-area{display:none}
+@media print{
+  body{background:#fff;color:#000}
+  .app,#modal-backdrop,#toast{display:none !important}
+  #print-area{display:block;padding:24px}
+  #print-area h1{font-size:22px;margin:0 0 2px}
+  #print-area .cols{columns:2;column-gap:18px;margin-top:14px}
+  #print-area .pb{break-inside:avoid;border:1px solid #bbb;border-radius:8px;padding:8px 10px;margin-bottom:10px}
+  #print-area .pb b{display:block;border-bottom:1px solid #ddd;padding-bottom:3px;margin-bottom:4px}
+}
+
+@media(max-width:880px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:sticky;top:0;height:auto;z-index:30;flex-direction:row;align-items:center;overflow-x:auto;padding:10px;border-right:0;border-bottom:1px solid var(--border);background:rgba(11,14,21,.9)}
+  .brand{padding:0 8px 0 0}.brand small{display:none}
+  .nav-btn{width:auto;white-space:nowrap;padding:7px 11px}
+  .nav-btn.active{box-shadow:none}
+  .side-foot{display:none}
+  .topbar{padding:12px 14px;flex-wrap:wrap}
+  .content{padding:16px 14px 60px}
+}
+  /* auth screen + user chip */
+  #auth-screen{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:radial-gradient(900px 600px at 15% 0%,#16203a,#0b0f1a 70%)}
+  .auth-card{width:min(420px,92vw);background:#131a2b;border:1px solid var(--border);border-radius:18px;padding:26px;box-shadow:0 24px 80px rgba(0,0,0,.55)}
+  .auth-err{color:var(--red);font-size:12.5px;min-height:18px;margin:6px 0 2px}
+  .user-chip{display:flex;align-items:center;gap:9px;padding:8px 9px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:#131a2b}
+  .avatar{width:30px;height:30px;flex:none;border-radius:50%;background:var(--accent);color:#0b0f1a;display:grid;place-items:center;font-weight:800;font-size:13px}
+  .uc-n{font-weight:700;font-size:12.5px;line-height:1.2}
+  .uc-e{color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">Sβ</div><div><b>..STUDY BUDDYYY..</b><small>by Sbeta</small></div></div>
+    <button class="nav-btn active" data-act="nav" data-view="dashboard"><span class="ico">📊</span>Dashboard</button>
+    <button class="nav-btn" data-act="nav" data-view="subjects"><span class="ico">📚</span>Subjects</button>
+    <button class="nav-btn" data-act="nav" data-view="plan"><span class="ico">🗓️</span>Study Plan</button>
+    <button class="nav-btn" data-act="nav" data-view="pomodoro"><span class="ico">⏱️</span>Focus Timer</button>
+    <button class="nav-btn" data-act="nav" data-view="flashcards"><span class="ico">🃏</span>Flashcards</button>
+    <button class="nav-btn" data-act="nav" data-view="doubts"><span class="ico">🙋</span>Doubt Solver</button>
+    <button class="nav-btn" data-act="nav" data-view="library"><span class="ico">🗂️</span>Notes &amp; Papers</button>
+    <button class="nav-btn" data-act="nav" data-view="coach"><span class="ico">🤖</span>AI Coach</button>
+    <div class="side-foot" id="side-foot"></div>
+  </aside>
+  <div class="main">
+    <header class="topbar">
+      <h1 id="topbar-title">Dashboard</h1>
+      <div class="spacer"></div>
+      <span id="pill-exam" data-act="edit-exams" title="Edit exam dates (shortcut: E)" style="cursor:pointer"></span>
+      <span id="pill-today"></span>
+      <span id="pill-streak"></span>
+    </header>
+    <main class="content">
+      <section class="view-panel active" data-panel="dashboard" id="panel-dashboard"></section>
+      <section class="view-panel" data-panel="subjects" id="panel-subjects"></section>
+      <section class="view-panel" data-panel="plan" id="panel-plan"></section>
+      <section class="view-panel" data-panel="pomodoro" id="panel-pomodoro"></section>
+      <section class="view-panel" data-panel="flashcards" id="panel-flashcards"></section>
+      <section class="view-panel" data-panel="doubts" id="panel-doubts"></section>
+      <section class="view-panel" data-panel="library" id="panel-library"></section>
+      <section class="view-panel" data-panel="coach" id="panel-coach"></section>
+    </main>
+  </div>
+</div>
+<div id="auth-screen"></div>
+<div id="modal-backdrop"></div>
+<div id="toast"></div>
+<div id="print-area"></div>
+
+<script>
+/* ============================================================
+   ..STUDY BUDDYYY.. (Sbeta) — offline study planner
+   Data lives in localStorage. Local email sign-in; nothing leaves the device.
+   ============================================================ */
+'use strict';
+
+const $  = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const LS_KEY = 'studybuddy.v1';
+const SESSION_KEY = 'studybuddy.session';
+const ACCOUNTS_KEY = 'studybuddy.accounts';
+const GOOGLE_ID_KEY = 'studybuddy.googleClientId';
+const DAY = 86400000;
+let user = null;               // signed-in profile {email, name, since} — null = guest
+
+function todayISO(d = new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function parseISO(iso){ const [y,m,d] = iso.split('-').map(Number); return new Date(y, m-1, d); }
+function addDaysISO(iso, n){ const d = parseISO(iso); d.setDate(d.getDate()+n); return todayISO(d); }
+function daysUntil(iso){ if(!iso) return null; return Math.round((parseISO(iso) - parseISO(todayISO())) / DAY); }
+function fmtDay(iso){ return parseISO(iso).toLocaleDateString(undefined, {weekday:'short', month:'short', day:'numeric'}); }
+function fmtDayShort(iso){ return parseISO(iso).toLocaleDateString(undefined, {month:'short', day:'numeric'}); }
+function fmtMin(m){ return m >= 60 ? `${Math.floor(m/60)}h ${m%60 ? m%60+'m' : ''}`.trim() : `${m}m`; }
+function timeAgo(ms){ const s = Math.floor((Date.now()-ms)/1000);
+  if (s<60) return 'just now'; if (s<3600) return Math.floor(s/60)+'m ago';
+  if (s<DAY) return Math.floor(s/3600)+'h ago'; return Math.floor(s/DAY)+'d ago'; }
+
+const SUBJECT_COLORS = ['#6c8cff','#2dd4a0','#f5b04c','#f26d6d','#a78bfa','#4cc9f0','#ec6aa8','#a3c94c'];
+const CARD_INTERVALS = [0, 1, 3, 7, 16, 35]; // Leitner boxes 1..5 → days
+const DIFF_LABEL = {1:'Easy', 2:'Medium', 3:'Hard'};
+
+/* ---------- state ---------- */
+let state = null;
+function defaultState(){
+  return {
+    settings: { focusMin:25, breakMin:5, longBreakMin:15, cyclesBeforeLong:4, dailyTargetMin:120, soundOn:true },
+    subjects: [],   // {id,name,color,examDate,confidence(1-5),weight(1-3),topics:[{id,name,done,difficulty}]}
+    tasks:    [],   // {id,subjectId,title,date,minutes,done,source:'plan'|'manual',topicId}
+    sessions: [],   // {id,subjectId,minutes,at}
+    decks:    [],   // {id,subjectId,name,cards:[{id,front,back,box,due}]}
+    sheets:   [],   // (kept for old saved data) — replaced by doubts
+    doubts:   [],   // {q, a, subjectId, tags, solved, created}
+    goals:    [],   // {id,text,done}
+    library:  [],   // {id,kind:'note'|'paper',subjectId,title,meta,body,updated}
+    chat:     [],
+    pomo:     { mode:'focus', endsAt:null, remainingMs:25*60000, cycle:0, subjectId:null, taskId:null, running:false },
+  };
+}
+const dataKey = () => user ? `studybuddy.v1:u:${user.email}` : LS_KEY;
+function save(){ try { const s = JSON.stringify(state); localStorage.setItem(dataKey(), s); localStorage.setItem(dataKey()+':bak', s); } catch(e){ console.warn('save failed', e); } }
+function load(){
+  try {
+    const key = dataKey();
+    let raw = localStorage.getItem(key);
+    if ((!raw || raw === 'undefined' || raw === 'null')){   // primary copy lost/corrupt → rescue from backup
+      const bak = localStorage.getItem(key + ':bak');
+      if (bak && bak !== 'undefined'){ try { JSON.parse(bak); localStorage.setItem(key, bak); raw = bak; console.warn('primary data missing — restored from backup copy'); } catch(e){} }
+    }
+    if (!raw && user){
+      // first sign-in on this device → adopt the pre-login data so nothing is lost
+      const legacy = localStorage.getItem(LS_KEY);
+      if (legacy && !localStorage.getItem('studybuddy.migrated')){
+        localStorage.setItem(key, legacy); localStorage.setItem('studybuddy.migrated', '1'); raw = legacy;
+      }
+      if (!raw){ // one-time migration from the old app name
+        const old = localStorage.getItem('focuspilot.v1');
+        if (old){ localStorage.setItem(key, old); localStorage.removeItem('focuspilot.v1'); raw = old; }
+      }
+    }
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (s.doubts) s.doubts = s.doubts.map(d => d.id ? d : Object.assign(d, { id: uid() })); // repair pre-fix doubts
+    return Object.assign(defaultState(), s);
+  } catch(e){ return null; }
+}
+const subjById = id => state.subjects.find(s => s.id === id);
+const subjColor = s => s ? s.color : '#6c8cff';
+const topicProgress = s => { const n = s.topics.length; const d = s.topics.filter(t=>t.done).length; return {n, d, pct: n ? Math.round(d/n*100) : 0}; };
+
+function minutesOn(iso){ return state.tasks.filter(t=>t.date===iso && t.done).reduce((a,t)=>a+t.minutes,0); }
+function plannedOn(iso){ return state.tasks.filter(t=>t.date===iso).reduce((a,t)=>a+t.minutes,0); }
+function studiedOn(iso){
+  return state.sessions.filter(s => todayISO(new Date(s.at)) === iso).reduce((a,s)=>a+s.minutes,0);
+}
+function streakDays(){
+  let n = 0; let iso = todayISO();
+  if (studiedOn(iso) < 20) iso = addDaysISO(iso, -1); // today not started yet doesn't break streak
+  while (studiedOn(iso) >= 20) { n++; iso = addDaysISO(iso, -1); }
+  return n;
+}
+function cardsDueCount(){
+  const now = Date.now();
+  return state.decks.reduce((a,d)=> a + d.cards.filter(c => new Date(c.due).getTime() <= now).length, 0);
+}
+function nextExam(){
+  const upcoming = state.subjects.filter(s => s.examDate && daysUntil(s.examDate) >= 0)
+    .sort((a,b)=> daysUntil(a.examDate) - daysUntil(b.examDate));
+  return upcoming[0] || null;
+}
+
+/* ---------- demo data ---------- */
+function loadDemo(){
+  const t = todayISO();
+  const tk = (name, difficulty, done=false) => ({ id:uid(), name, done, difficulty });
+  const math = { id:uid(), name:'Mathematics', color:'#6c8cff', examDate:addDaysISO(t,18), confidence:3, weight:3, topics:[
+    tk('Quadratic equations',1,true), tk('Trigonometric identities',2), tk('Calculus: derivatives',3),
+    tk('Calculus: integration',3), tk('Probability',2), tk('Statistics basics',1,true),
+    tk('Vectors',2), tk('Sequences & series',2) ]};
+  const phys = { id:uid(), name:'Physics', color:'#2dd4a0', examDate:addDaysISO(t,9), confidence:2, weight:3, topics:[
+    tk('Kinematics',1,true), tk("Newton's laws",2), tk('Work, energy & power',2), tk('Momentum',2),
+    tk('Circular motion',3), tk('Waves & sound',2), tk('Optics basics',1) ]};
+  const hist = { id:uid(), name:'History', color:'#f5b04c', examDate:addDaysISO(t,31), confidence:4, weight:1, topics:[
+    tk('Causes of World War I',2,true), tk('Interwar period',2), tk('World War II',3), tk('The Cold War',2) ]};
+  const now = Date.now();
+  const card = (front, back, box=1, dueOffsetMin=0) => ({ id:uid(), front, back, box, due:new Date(now - 60000 + dueOffsetMin*60000).toISOString() });
+  const decks = [
+    { id:uid(), subjectId:phys.id, name:'Physics — core recall', cards:[
+      card("State Newton's second law", 'F = ma — net force equals mass × acceleration. Give a worked example with units.'),
+      card('Define momentum & its unit', 'p = mv, measured in kg·m/s. In a closed system momentum is conserved.'),
+      card('Kinematics: the 3 SUVAT equations', 'v = u + at;  s = ut + ½at²;  v² = u² + 2as (constant a only).'),
+      card('When is work done zero?', 'When force is perpendicular to displacement, e.g. circular motion — W = Fd cosθ, cos90° = 0.', 2, 60000)]},
+    { id:uid(), subjectId:math.id, name:'Maths — formulas', cards:[
+      card('Quadratic formula', 'x = (−b ± √(b² − 4ac)) / 2a. Discriminant > 0 → two roots, = 0 → one, < 0 → none (real).'),
+      card('sin²θ + cos²θ = ?', '1. Divide by cos²θ to get 1 + tan²θ = sec²θ.')]},
+  ];
+  const doubts = [
+    { id:uid(), subjectId:phys.id, q:'A car brakes from 20 m/s and stops in 50 m. What was its deceleration?',
+      a:'**1.** List what you know: u = 20 m/s, v = 0, s = 50 m, a = ?\n\n**2.** Pick a SUVAT equation without time: v² = u² + 2as.\n\n**3.** Solve: 0 = 400 + 2a·50 → 100a = −400 → **a = −4 m/s²**.\n\n**Why:** the negative sign just means the car slows down. Write it as 4 m/s² deceleration in the answer.', tags:['Kinematics','SUVAT'], solved:true },
+    { id:uid(), subjectId:math.id, q:'When do I use integration vs differentiation?',
+      a:'**Rule of thumb:**\n• Differentiation → rates of change, gradients, velocity from displacement.\n• Integration → accumulation, areas, displacement from velocity.\n\n**Check:** does the question ask *how fast something changes* → differentiate. Does it ask *total of something built up over time* → integrate.', tags:['Calculus'], solved:true }
+  ];
+  const tasks = [
+    { id:uid(), subjectId:phys.id, title:"Study: Newton's laws", date:t, minutes:50, done:false, source:'plan' },
+    { id:uid(), subjectId:phys.id, title:'Active recall — flashcards (Physics)', date:t, minutes:25, done:true, source:'plan' },
+    { id:uid(), subjectId:phys.id, title:'Revise solved doubts (Physics)', date:t, minutes:15, done:false, source:'plan' },
+    { id:uid(), subjectId:math.id, title:'Study: Calculus — derivatives', date:addDaysISO(t,1), minutes:75, done:false, source:'plan' },
+  ];
+  const sessions = [
+    { id:uid(), subjectId:phys.id, minutes:25, at: now - 3*3600000 },
+    { id:uid(), subjectId:math.id, minutes:25, at: now - 1*DAY - 3600000 },
+    { id:uid(), subjectId:phys.id, minutes:50, at: now - 1*DAY - 2*3600000 },
+    { id:uid(), subjectId:math.id, minutes:25, at: now - 2*DAY - 3600000 },
+    { id:uid(), subjectId:phys.id, minutes:50, at: now - 3*DAY - 3600000 },
+  ];
+  state = Object.assign(defaultState(), { subjects:[math,phys,hist], decks, doubts, tasks, sessions,
+    goals: [ { id:uid(), text:'Clear all due flashcards today', done:false },
+             { id:uid(), text:'Revise the solved doubts before each exam', done:false } ],
+    chat: [] });
+  save();
+}
+
+/* ---------- tiny UI kit ---------- */
+function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(()=> el.classList.remove('show'), 2400); }
+function openModal(html, {wide=false}={}){
+  const back = $('#modal-backdrop');
+  back.innerHTML = `<div class="modal${wide?' wide':''}">${html}</div>`;
+  back.classList.add('open');
+  back.onclick = e => { if (e.target === back) closeModal(); };
+  $$('[data-act=modal-close]', back).forEach(b => b.onclick = closeModal);
+}
+function closeModal(){ if (typeof libBlobUrl === 'string' && libBlobUrl){ try { URL.revokeObjectURL(libBlobUrl); } catch(e){} libBlobUrl = null; }
+  $('#modal-backdrop').classList.remove('open'); $('#modal-backdrop').innerHTML=''; }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  // shortcut: E opens the exam-dates editor (unless typing or a modal is open)
+  if ((e.key === 'e' || e.key === 'E') && !e.ctrlKey && !e.metaKey && !e.altKey){
+    const t = e.target;
+    const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+    if (!typing && !$('#modal-backdrop').classList.contains('open')){ e.preventDefault(); openExamDatesModal(); }
+  }
+});
+
+const VIEW_TITLES = { dashboard:'Dashboard', subjects:'Subjects & Syllabus', plan:'Study Plan',
+  pomodoro:'Focus Timer', flashcards:'Flashcards — Active Recall',  doubts:'Doubt Solver',
+  library:'Notes & Previous Papers', coach:'AI Study Coach' };
+
+/* ---------- navigation ---------- */
+function setView(v){
+  $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  $$('.view-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === v));
+  $('#topbar-title').textContent = VIEW_TITLES[v] || v;
+  render();
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn) return;
+  const act = btn.dataset.act;
+  if (act === 'nav') setView(btn.dataset.view);
+});
+
+/* ---------- topbar pills + sidebar footer ---------- */
+function renderPills(){
+  const exam = nextExam();
+  const d = exam ? daysUntil(exam.examDate) : null;
+  $('#pill-exam').innerHTML = exam
+    ? `<span class="pill acc">🎓 ${esc(exam.name)} · ${d===0?'today': d===1?'tomorrow':'in '+d+' days'}</span>`
+    : `<span class="pill warn">No exam date set</span>`;
+  $('#pill-today').innerHTML = `<span class="pill">📅 ${fmtDay(todayISO())}</span>`;
+  const due = cardsDueCount();
+  $('#pill-streak').innerHTML = `<span class="pill ${due?'warn':'good'}">🔥 ${streakDays()}d streak${due?` · ${due} cards due`:''}</span>`;
+
+  const mins = studiedOn(todayISO());
+  const target = state.settings.dailyTargetMin;
+  const uname = user ? user.name : 'Guest';
+  const uemail = user ? user.email : 'no account';
+  $('#side-foot').innerHTML = `
+    <div class="user-chip">
+      <span class="avatar">${esc((uname[0]||'G').toUpperCase())}</span>
+      <div style="min-width:0;flex:1"><div class="uc-n">${esc(uname)}</div><div class="uc-e">${esc(uemail)}</div></div>
+      <button class="iconbtn" data-act="pwa-install" title="Install as an app on this phone (home-screen icon)">📲</button>
+      <button class="iconbtn" data-act="backup-download" title="Download a backup of all your data">⬇</button>
+      <button class="iconbtn" data-act="backup-restore" title="Restore data from a backup file">⬆</button>
+      <button class="iconbtn" data-act="logout" title="Log out">⏻</button>
+    </div>
+    <div class="row"><span>Today</span><b>${fmtMin(mins)} / ${fmtMin(target)}</b></div>
+    <div class="bar"><i style="width:${clamp(mins/target*100,0,100)}%"></i></div>
+    <div style="margin-top:8px;display:flex;justify-content:space-between"><span>Subjects</span><b>${state.subjects.length}</b></div>
+    <div class="row"><span>Tasks done</span><b>${state.tasks.filter(t=>t.done).length}/${state.tasks.length}</b></div>`;
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+function renderDashboard(){
+  const t = todayISO();
+  const todays = state.tasks.filter(x => x.date === t).sort((a,b)=> a.done - b.done);
+  const studied = studiedOn(t);
+  const planned = plannedOn(t);
+  const due = cardsDueCount();
+  const ex = nextExam();
+  const upcoming = state.subjects.filter(s=>s.examDate && daysUntil(s.examDate)>=0)
+    .sort((a,b)=>daysUntil(a.examDate)-daysUntil(b.examDate));
+  const dueCards = due ? dueCountBySubject() : [];
+  const chart = weekChart();
+
+  $('#panel-dashboard').innerHTML = `
+    <div class="card hero">
+      <div class="row wrap">
+        <div class="grow">
+          <h2 style="font-size:18px">${greeting()}${ex ? ` — ${esc(ex.name)} in <span style="color:var(--accent)">${Math.max(daysUntil(ex.examDate),0)} days</span>` : ''}</h2>
+          <p class="sub" style="margin:6px 0 0">${dashboardHint(due, planned, studied)}${ex ? examMotiv(ex) : ''}</p>
+        </div>
+        <button class="btn primary" data-act="start-recommended">▶ Start recommended session</button>
+      </div>
+    </div>
+
+    <div class="grid g4" style="margin-top:16px">
+      <div class="stat"><div class="k">Studied today</div><div class="v">${fmtMin(studied)}</div><div class="s">target ${fmtMin(state.settings.dailyTargetMin)}</div></div>
+      <div class="stat"><div class="k">Planned today</div><div class="v">${planned ? fmtMin(planned) : '—'}</div><div class="s">${todays.length} task${todays.length===1?'':'s'} · ${todays.filter(x=>x.done).length} done</div></div>
+      <div class="stat"><div class="k">Cards due</div><div class="v">${due}</div><div class="s">active recall</div></div>
+      <div class="stat"><div class="k">Streak</div><div class="v">${streakDays()}d</div><div class="s">keep it alive 🔥</div></div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div>
+        <div class="card">
+          <h2>This week's study time</h2>
+          <div class="chart">${chart}</div>
+        </div>
+        <div class="card">
+          <div class="row wrap">
+            <h2 style="margin:0">Exam countdowns</h2>
+            <div style="flex:1"></div>
+            <button class="btn sm ghost" data-act="edit-exams" title="Shortcut: E">✎ Dates</button>
+          </div>
+          ${upcoming.length ? `<div class="list" style="margin-top:10px">${upcoming.map(s => {
+            const d = daysUntil(s.examDate); const p = topicProgress(s);
+            const urgency = d<=3 ? 'var(--red)' : d<=7 ? 'var(--amber)' : 'var(--green)';
+            return `<div class="item">
+              <span class="chip" style="background:${s.color}22;color:${s.color}">${esc(s.name)}</span>
+              <div class="grow">
+                <div class="bar"><i style="width:${p.pct}%;background:${s.color}"></i></div>
+                <div class="meta">syllabus ${p.pct}% · ${p.d}/${p.n} topics</div>
+              </div>
+              <b style="color:${urgency}">${d===0?'TODAY':d+'d'}</b>
+            </div>`;}).join('')}</div>`
+          : `<p class="sub">No upcoming exams. Set dates in <b>Subjects</b> — the planner and coach use them.</p>`}
+        </div>
+        ${dueCards.length ? `<div class="card">
+          <h2>Recall backlog</h2>
+          <div class="list" style="margin-top:10px">${dueCards.map(({deck,n,color,name})=>`
+            <div class="item"><span class="chip" style="background:${color}22;color:${color}">${esc(name)}</span>
+              <div class="grow">${esc(deck.name)}</div><b style="color:var(--amber)">${n} due</b>
+              <button class="btn sm primary" data-act="study-deck" data-id="${deck.id}">Study</button></div>`).join('')}</div>
+        </div>` : ''}
+        ${state.goals.length ? `<div class="card">
+          <h2>Goals</h2>
+          <div class="list" style="margin-top:10px">${state.goals.map(g=>`
+            <div class="item ${g.done?'done':''}">
+              <input type="checkbox" ${g.done?'checked':''} data-act="toggle-goal" data-id="${g.id}">
+              <div class="grow"><div class="title">${esc(g.text)}</div></div>
+              <button class="iconbtn" data-act="del-goal" data-id="${g.id}">✕</button>
+            </div>`).join('')}</div>
+        </div>` : ''}
+      </div>
+    </div>`;
+}
+
+function greeting(){ const h = new Date().getHours();
+  const base = h<12?'Good morning ☀️':h<18?'Good afternoon 👋':'Good evening 🌙';
+  return base + (user ? `, ${esc(user.name.split(/[ ._-]/)[0])}` : ''); }
+function dashboardHint(due, planned, studied){
+  if (!state.subjects.length) return 'Add your subjects and exam dates first — everything else builds on them.';
+  if (due) return `You have <b>${due}</b> flashcards due — clear them first, recall beats re-reading.`;
+  if (!planned) return 'No tasks planned for today. Ask the coach, or generate a full plan from the Study Plan tab.';
+  if (studied >= state.settings.dailyTargetMin) return `Daily target hit (${fmtMin(studied)}) — anything more is a bonus. Consider light review only.`;
+  return `Stay on plan: <b>${fmtMin(Math.max(planned-studied,0))}</b> left to reach today's schedule.`;
+}
+
+/* motivational boost tied to the exam countdown (tap to shuffle) */
+const EXAM_MOTIV = [
+  'Consistency beats intensity — every focused session compounds.',
+  'Small steps every day turn exam stress into exam readiness.',
+  'One more revision now means one less panic later. You have got this.',
+  'Progress, not perfection — every finished topic makes you stronger.',
+  'The exam rewards the calm, prepared mind you are building right now.',
+  'Believe in the work you already put in — it is carrying you forward.',
+  'Tough chapters make strong students. You are doing the hard part.',
+  'Your future self is cheering for the effort you make today.',
+  'Focus is a muscle — every minute you study, it grows.',
+  'Trust the plan, trust the process, trust yourself.',
+];
+let motivIdx = new Date().getDate() % EXAM_MOTIV.length;
+function nextMotiv(){ motivIdx = (motivIdx+1) % EXAM_MOTIV.length; renderDashboard(); }
+function examMotiv(ex){
+  const days = Math.max(daysUntil(ex.examDate), 0);
+  const lead = days===0 ? 'Exam day — trust your preparation and give it your best! 🍀'
+    : days===1 ? `One day to ${esc(ex.name)} — revise light, rest well. You are ready! 💪`
+    : `${days} days to go — ${EXAM_MOTIV[motivIdx]}`;
+  return `<br><span data-act="next-motiv" style="cursor:pointer" title="Tap for another boost">💪 <b style="color:${days<=1?'var(--amber)':'var(--green)'}">${lead}</b> <span style="color:var(--muted);font-size:11px">tap ↻</span></span>`;
+}
+
+function dueCountBySubject(){
+  const now = Date.now(); const out = [];
+  for (const deck of state.decks){
+    const n = deck.cards.filter(c => new Date(c.due).getTime() <= now).length;
+    if (!n) continue;
+    const s = subjById(deck.subjectId);
+    out.push({ deck, n, color: subjColor(s), name: s ? s.name : 'General' });
+  }
+  return out.sort((a,b)=>b.n-a.n);
+}
+
+function weekChart(){
+  const out = [];
+  for (let i=6;i>=0;i--){
+    const iso = addDaysISO(todayISO(), -i);
+    const m = studiedOn(iso);
+    const max = Math.max(60, ...Array.from({length:7},(_,k)=>studiedOn(addDaysISO(todayISO(),-k))));
+    const h = max ? clamp(m/max*100, 2, 100) : 2;
+    out.push(`<div class="col ${i===0?'today':''}">
+      <div class="stick" style="height:${h}%" title="${fmtMin(m)}"></div>
+      <div class="lbl">${parseISO(iso).toLocaleDateString(undefined,{weekday:'narrow'})}</div></div>`);
+  }
+  return out.join('');
+}
+
+function taskRow(task){
+  const s = subjById(task.subjectId);
+  const color = subjColor(s);
+  return `<div class="item ${task.done?'done':''}">
+    <input type="checkbox" ${task.done?'checked':''} data-act="toggle-task" data-id="${task.id}">
+    <span class="chip" style="background:${color}22;color:${color}">${esc(s?s.name:'—')}</span>
+    <div class="grow"><div class="title">${esc(task.title)}</div></div>
+    <span class="meta">${task.minutes}m</span>
+    <button class="btn sm primary" data-act="pomo-with-task" data-id="${task.id}" title="Start Pomodoro for this">▶</button>
+    <button class="iconbtn" data-act="del-task" data-id="${task.id}" title="Delete">✕</button>
+  </div>`;
+}
+
+/* ============================================================
+   SUBJECTS & SYLLABUS
+   ============================================================ */
+function renderSubjects(){
+  const p = $('#panel-subjects');
+  if (!state.subjects.length){
+    p.innerHTML = `
+      <div class="card"><h2>Subjects & Syllabus</h2>
+        <div class="empty" style="margin-top:12px"><div class="big">📚</div>
+          Add your first subject with its exam date.<br>The AI planner schedules topics by weight, confidence and time left.
+          <br><br><button class="btn primary" data-act="add-subject-modal">+ Add subject</button>
+          <button class="btn" data-act="load-demo" style="margin-left:8px">Load demo data</button></div></div>`;
+    return;
+  }
+  p.innerHTML = `
+    <div class="row" style="margin-bottom:16px">
+      <div class="grow"><h2 style="margin:0;font-size:16px">Subjects & Syllabus</h2>
+        <p class="sub" style="margin:2px 0 0">Progress bars track topics you've marked done. Difficulty + weight feed the AI planner.</p></div>
+      <button class="btn primary" data-act="add-subject-modal">+ Add subject</button>
+    </div>
+    ${state.subjects.map(s => {
+      const pr = topicProgress(s);
+      const d = daysUntil(s.examDate);
+      const urgency = d===null ? 'var(--muted)' : d<=3 ? 'var(--red)' : d<=7 ? 'var(--amber)' : 'var(--green)';
+      return `
+      <div class="card">
+        <div class="row wrap">
+          <span class="chip" style="background:${s.color}22;color:${s.color};font-size:13px;padding:5px 12px;cursor:pointer" data-act="subject-detail" data-id="${s.id}" title="View all data for ${esc(s.name)}">${esc(s.name)}</span>
+          <span class="pill" style="border-color:${urgency}55;color:${urgency}">
+            ${s.examDate ? `🎓 ${fmtDayShort(s.examDate)} · ${d<0? 'past' : d===0?'today':'in '+d+'d'}` : 'no exam date'}</span>
+          <span class="tag">weight ${s.weight}</span>
+          <span class="tag">confidence ${'●'.repeat(s.confidence)}${'○'.repeat(5-s.confidence)}</span>
+          <div style="flex:1"></div>
+          <button class="btn sm" data-act="add-topic" data-id="${s.id}">+ Topic</button>
+          <button class="btn sm ghost" data-act="edit-subject" data-id="${s.id}">✎ Edit</button>
+          <button class="btn sm danger" data-act="del-subject" data-id="${s.id}">Delete</button>
+        </div>
+        <div class="row" style="margin:12px 0 4px">
+          <div class="bar grow"><i style="width:${pr.pct}%;background:${s.color}"></i></div>
+          <b style="min-width:70px;text-align:right">${pr.pct}%</b>
+        </div>
+        <div class="sub" style="margin-bottom:10px">${pr.d} of ${pr.n} topics done${s.examDate && d>=0 && pr.n>pr.d ? ` · ~${Math.max(1, Math.ceil((pr.n-pr.d) * Math.max(s.weight,1) * 0.75 / Math.max(daysUntil(s.examDate),1)))} topic(s)/day needed` : ''}</div>
+        <div class="list">
+          ${s.topics.length ? [...s.topics].sort((a,b)=> a.done-b.done || a.difficulty-b.difficulty).map(t => `
+            <div class="item ${t.done?'done':''}">
+              <input type="checkbox" ${t.done?'checked':''} data-act="toggle-topic" data-sid="${s.id}" data-id="${t.id}">
+              <div class="grow"><div class="title">${esc(t.name)}</div></div>
+              <span class="tag">${DIFF_LABEL[t.difficulty]}</span>
+              <button class="iconbtn" data-act="del-topic" data-sid="${s.id}" data-id="${t.id}">✕</button>
+            </div>`).join('')
+          : '<p class="sub">No topics yet — add the syllabus items, or let the coach suggest a breakdown.</p>'}
+        </div>
+      </div>`;}).join('')}`;
+}
+
+/* ============================================================
+   AI PLANNER ENGINE
+   Priority model:
+   urgency  = how close the exam is
+   weakness = low confidence, high difficulty topics remaining
+   value    = subject weight
+   Each day gets a capacity (daily target) filled with study /
+   recall / review blocks until full.
+   ============================================================ */
+function subjectPriority(s, days){
+  const pr = topicProgress(s);
+  const remaining = pr.n - pr.d;
+  const conf = 6 - s.confidence;               // low confidence → high priority
+  const urgency = s.examDate && days >= 0 ? clamp(30 - Math.min(days,30), 2, 30) : 6;
+  const overload = (s.examDate && days >= 0 && days < 14 && remaining > 0)
+    ? clamp((remaining * s.weight) / Math.max(days,1) / 2, 0, 6) : 0;
+  return urgency + conf * 1.6 + s.weight * 2 + overload;
+}
+
+function nextTopic(s){
+  const open = s.topics.filter(t=>!t.done);
+  if (!open.length) return null;
+  open.sort((a,b)=> b.difficulty - a.difficulty);
+  return open[0];
+}
+
+function buildPlan(){
+  const t = todayISO();
+  const subs = state.subjects.filter(s => s.topics.length);
+  if (!subs.length) return { tasks:[], days:0, note:'Add subjects and syllabus topics first.' };
+
+  const capacity = state.settings.dailyTargetMin;
+  const horizon = 14;
+  // keep completed tasks, user-created manual tasks & far-future items; replace the rest of the horizon
+  const keepIds = new Set(state.tasks.filter(x => x.done || x.source==='manual' || x.date > addDaysISO(t, horizon)).map(x=>x.id));
+  const tasks = state.tasks.filter(x => keepIds.has(x.id));
+
+  const schedule = {}; // iso -> minutes used
+  for (let i=0;i<horizon;i++) schedule[addDaysISO(t,i)] = 0;
+  schedule[t] = tasks.filter(x=>x.date===t && x.done).reduce((a,x)=>a+x.minutes,0);
+
+  const focusMin = state.settings.focusMin;
+  const entries = [];
+
+  // Pass 1 — spaced recall blocks (25m) for subjects with decks, every ~3 days
+  subs.forEach(s => {
+    if (!state.decks.some(d=>d.subjectId===s.id)) return;
+    for (let i=1;i<horizon;i+=3){
+      const iso = addDaysISO(t, i);
+      if (schedule[iso] + 25 <= capacity + 30){
+        schedule[iso] += 25;
+        entries.push({ subjectId:s.id, title:`Active recall — flashcards (${s.name})`, date:iso, minutes:25, source:'plan' });
+      }
+    }
+  });
+
+  // Pass 2 — topic study blocks by priority
+  const queue = [...subs].sort((a,b)=> subjectPriority(b, daysUntil(b.examDate)) - subjectPriority(a, daysUntil(a.examDate)))
+    .map(s => ({ s, remaining: s.topics.filter(x=>!x.done).length }));
+  let guard = 0;
+  while (queue.some(q=>q.remaining>0) && guard++ < 500){
+    let placed = false;
+    for (let i=0;i<horizon;i++){
+      const iso = addDaysISO(t, i);
+      const free = capacity - schedule[iso];
+      if (free < focusMin) continue;
+      queue.sort((a,b)=> subjectPriority(b.s, daysUntil(b.s.examDate) - i) - subjectPriority(a.s, daysUntil(a.s.examDate) - i));
+      const q = queue.find(x=>x.remaining>0);
+      if (!q) break;
+      const topic = nextTopic(q.s);
+      if (!topic){ q.remaining = 0; continue; }
+      const mins = topic.difficulty === 3 ? focusMin*2 : focusMin; // hard topics get a double block
+      const use = Math.min(mins, Math.floor(free/focusMin)*focusMin || focusMin);
+      if (use > free) continue;
+      schedule[iso] += use;
+      entries.push({ subjectId:q.s.id, title:`Study: ${topic.name}`, date:iso, minutes:use, source:'plan', topicId:topic.id });
+      q.remaining--;
+      placed = true;
+      break;
+    }
+    if (!placed) break;
+  }
+
+  // Pass 3 — pre-exam doubt revision the evening before each exam
+  for (const s of subs){
+    if (!s.examDate) continue;
+    const d = daysUntil(s.examDate);
+    if (d >= 1 && d <= horizon && (state.doubts||[]).some(x=>x.subjectId===s.id)){
+      const iso = addDaysISO(s.examDate, -1);
+      if (schedule[iso] !== undefined){
+        schedule[iso] += 15;
+        entries.push({ subjectId:s.id, title:`Revise doubts (${s.name})`, date:iso, minutes:15, source:'plan' });
+      }
+    }
+  }
+
+  entries.forEach(e => tasks.push({ id:uid(), done:false, ...e }));
+  tasks.sort((a,b)=> a.date < b.date ? -1 : a.date > b.date ? 1 : a.done - b.done);
+  state.tasks = tasks; save();
+
+  const forToday = entries.filter(e=>e.date===t).length;
+  return { tasks:entries, days:horizon,
+    note:`Scheduled ${entries.length} blocks across ${horizon} days (${forToday} today) — weighted by exam urgency, difficulty, confidence and subject weight.` };
+}
+
+/* one clear notification about today's tasks (auto once per day + 🔔 button) */
+function notifyTasksToday(){
+  const t = todayISO();
+  const todays = state.tasks.filter(x=>x.date===t && !x.done);
+  const mins = fmtMin(todays.reduce((a,x)=>a+x.minutes,0));
+  const body = todays.length
+    ? `${todays.length} task${todays.length===1?'':'s'} · ${mins} planned:\n${todays.slice(0,5).map(x=>'• '+x.title).join('\n')}`
+    : 'Nothing planned for today — add a task or generate a plan in Study Plan.';
+  toast(`📅 Today: ${todays.length ? `${todays.length} task${todays.length===1?'':'s'} (${mins})` : 'nothing planned yet'}`);
+  if (window.Notification){
+    if (Notification.permission === 'granted'){ try { new Notification("📅 Today's tasks", { body }); } catch(e){} }
+    else if (Notification.permission === 'default') Notification.requestPermission().then(p=>{ if (p==='granted'){ try { new Notification("📅 Today's tasks", { body }); } catch(e){} } });
+  }
+}
+
+function renderPlan(){
+  const t = todayISO();
+  const planned = state.tasks.filter(x=>x.source==='plan' || x.date>=t);
+  const dates = [...new Set(planned.map(x=>x.date))].filter(d => d >= addDaysISO(t,-1)).sort().slice(0,16);
+  $('#panel-plan').innerHTML = `
+    <div class="card hero">
+      <div class="row wrap">
+        <div class="grow">
+          <h2>🗓️ AI study plan</h2>
+          <p class="sub" style="margin:4px 0 0">The planner fills your days for two weeks: priority = exam urgency + difficulty + confidence + subject weight, plus spaced recall blocks and a pre-exam doubt review.</p>
+        </div>
+        <div class="row">
+          <button class="btn primary" data-act="gen-plan">✨ Generate / rebuild plan</button>
+          <button class="btn" data-act="add-task-modal">+ Task</button>
+        </div>
+      </div>
+    </div>
+    <div class="grid g3" style="margin-top:16px">
+      <div class="stat"><div class="k">Daily target</div><div class="v">${fmtMin(state.settings.dailyTargetMin)}</div><div class="s">capacity per day</div></div>
+      <div class="stat"><div class="k">Planned blocks</div><div class="v">${planned.filter(x=>!x.done).length}</div><div class="s">upcoming & incomplete</div></div>
+      <div class="stat"><div class="k">Remaining topics</div><div class="v">${state.subjects.reduce((a,s)=>a+s.topics.filter(x=>!x.done).length,0)}</div><div class="s">across all subjects</div></div>
+    </div>
+    ${dates.length ? dates.map(iso => {
+      const items = state.tasks.filter(x=>x.date===iso).sort((a,b)=>a.done-b.done);
+      const total = items.reduce((a,x)=>a+x.minutes,0);
+      const isToday = iso===t;
+      return `<div class="card" style="margin-top:16px;${isToday?'border-color:rgba(108,140,255,.5);':''}">
+        <div class="row wrap">
+          <h2 style="margin:0">${isToday?'📍 Today — ':''}${fmtDay(iso)}</h2>
+          ${isToday?`<button class="btn sm ghost" data-act="notify-today" title="Show today tasks as a notification">🔔 Notify me</button>`:''}
+          <span class="tag">${items.length} blocks · ${fmtMin(total)}</span>
+          ${isToday?'<span class="chip" style="background:var(--accent)22;color:var(--accent)">live</span>':''}
+          <div style="flex:1"></div>
+          <button class="btn sm ghost" data-act="clear-day" data-date="${iso}">Clear day</button>
+        </div>
+        <div class="list" style="margin-top:10px">${items.map(taskRow).join('')}</div>
+      </div>`;}).join('')
+    : `<div class="card" style="margin-top:16px"><div class="empty"><div class="big">🪄</div>No plan yet.<br>Hit <b>Generate / rebuild plan</b> and the AI will schedule your syllabus.</div></div>`}`;
+}
+
+/* ============================================================
+   POMODORO
+   ============================================================ */
+let pomoTick = null;
+function pomoDuration(mode){
+  const st = state.settings;
+  return (mode==='focus' ? st.focusMin : mode==='break' ? st.breakMin : st.longBreakMin) * 60000;
+}
+function pomoStart(){
+  const p = state.pomo;
+  if (!p.endsAt) p.endsAt = Date.now() + p.remainingMs;
+  p.running = true; save();
+  clearInterval(pomoTick);
+  pomoTick = setInterval(pomoTickFn, 250);
+  pomoTickFn();
+}
+function pomoPause(){
+  const p = state.pomo;
+  if (p.endsAt) p.remainingMs = Math.max(0, p.endsAt - Date.now());
+  p.endsAt = null; p.running = false; save();
+  clearInterval(pomoTick);
+  renderPomodoro();
+}
+function pomoReset(){
+  const p = state.pomo;
+  clearInterval(pomoTick);
+  p.running=false; p.endsAt=null; p.remainingMs=pomoDuration(p.mode); save();
+  renderPomodoro();
+}
+function pomoSetMode(mode, auto=false){
+  const p = state.pomo;
+  clearInterval(pomoTick);
+  p.mode = mode; p.running=false; p.endsAt=null; p.remainingMs=pomoDuration(mode); save();
+  renderPomodoro();
+  if (auto) pomoStart();
+}
+function pomoTickFn(){
+  const p = state.pomo;
+  if (!p.running) return;
+  const left = p.endsAt ? p.endsAt - Date.now() : p.remainingMs;
+  if (left <= 0){ pomoComplete(); return; }
+  const el = $('#pomo-time');
+  if (el){
+    el.textContent = fmtClock(left);
+    const total = pomoDuration(p.mode);
+    const R = 112, C = 2*Math.PI*R;
+    const fg = $('#pomo-ring-fg');
+    if (fg) fg.style.strokeDashoffset = String(C * (1 - left/total));
+    const pct = Math.round((1 - left/total)*100);
+    document.title = `${fmtClock(left)} · ${p.mode==='focus'?'Focus':'Break'} — ..STUDY BUDDYYY..`;
+    const ppe = $('#pomo-pct'); if (ppe) ppe.textContent = pct + '%';
+  }
+}
+function fmtClock(ms){ const s = Math.max(0, Math.ceil(ms/1000)); return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`; }
+function pomoComplete(){
+  const p = state.pomo;
+  clearInterval(pomoTick);
+  ping();
+  if (p.mode === 'focus'){
+    const mins = state.settings.focusMin;
+    state.sessions.push({ id:uid(), subjectId:p.subjectId, minutes:mins, at:Date.now() });
+    if (p.taskId){ const task = state.tasks.find(x=>x.id===p.taskId); if (task) task.done = true; }
+    p.cycle = (p.cycle||0) + 1;
+    save();
+    toast(`🍅 Pomodoro done — ${mins}m logged${p.subjectId ? ' to ' + ((subjById(p.subjectId)||{}).name||'') : ''}`);
+    const long = p.cycle % state.settings.cyclesBeforeLong === 0;
+    pomoSetMode(long ? 'longbreak' : 'break', false);
+    if (window.Notification && Notification.permission === 'granted')
+      new Notification('🍅 Focus session complete', { body:`${mins} minutes logged. Time for a ${long?'long ':''}break!` });
+  } else {
+    toast('☕ Break over — ready for the next block?');
+    pomoSetMode('focus', false);
+    if (window.Notification && Notification.permission === 'granted')
+      new Notification('☕ Break finished', { body:'Back to focus when you are ready.' });
+  }
+  render();
+}
+function ping(){ if (!state.settings.soundOn) return;
+  try { const ac = new (window.AudioContext||window.webkitAudioContext)();
+    [880, 1174].forEach((f,i)=>{ const o=ac.createOscillator(), g=ac.createGain();
+      o.connect(g); g.connect(ac.destination); o.frequency.value=f; o.type='sine';
+      const t0 = ac.currentTime + i*0.18; g.gain.setValueAtTime(0.001,t0);
+      g.gain.exponentialRampToValueAtTime(0.2,t0+0.02); g.gain.exponentialRampToValueAtTime(0.001,t0+0.5);
+      o.start(t0); o.stop(t0+0.55); }); } catch(e){} }
+
+function renderPomodoro(){
+  const p = state.pomo;
+  const subjOpts = state.subjects.map(s=>`<option value="${s.id}" ${p.subjectId===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+  const taskOpts = state.tasks.filter(x=>x.date===todayISO() && !x.done)
+    .map(x=>`<option value="${x.id}" ${p.taskId===x.id?'selected':''}>${esc(x.title)} (${x.minutes}m)</option>`).join('');
+  const total = pomoDuration(p.mode);
+  const left = p.running && p.endsAt ? p.endsAt - Date.now() : p.remainingMs;
+  const R=112, C=2*Math.PI*R;
+  const modeLabel = p.mode==='focus' ? 'Focus' : p.mode==='break' ? 'Short break' : 'Long break';
+  const todayMin = studiedOn(todayISO());
+
+  $('#panel-pomodoro').innerHTML = `
+    <div class="pomo-grid">
+      <div class="card pomo-face">
+        <div class="row" style="gap:8px">
+          <button class="btn sm ${p.mode==='focus'?'primary':'ghost'}" data-act="pomo-mode" data-mode="focus">🍅 Focus</button>
+          <button class="btn sm ${p.mode==='break'?'primary':'ghost'}" data-act="pomo-mode" data-mode="break">☕ Break</button>
+          <button class="btn sm ${p.mode==='longbreak'?'primary':'ghost'}" data-act="pomo-mode" data-mode="longbreak">🌙 Long</button>
+        </div>
+        <div class="ring-wrap">
+          <svg width="250" height="250">
+            <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#6c8cff"/><stop offset="100%" stop-color="#a75bfa"/></linearGradient></defs>
+            <circle class="ring-bg" cx="125" cy="125" r="112"></circle>
+            <circle id="pomo-ring-fg" class="ring-fg" cx="125" cy="125" r="112"
+              stroke-dasharray="${C}" stroke-dashoffset="${C*(1-left/total)}"></circle>
+          </svg>
+          <div class="ring-center">
+            <div class="mode">${modeLabel}</div>
+            <div class="time" id="pomo-time">${fmtClock(left)}</div>
+            <div class="sub" id="pomo-pct">${Math.round((1-left/total)*100)}%</div>
+          </div>
+        </div>
+        <div class="row" style="gap:10px;margin-top:8px">
+          ${p.running
+            ? '<button class="btn" data-act="pomo-pause">⏸ Pause</button>'
+            : '<button class="btn primary" data-act="pomo-start">▶ Start</button>'}
+          <button class="btn ghost" data-act="pomo-reset">↺ Reset</button>
+          <button class="btn ghost" data-act="pomo-skip">⏭ Skip</button>
+        </div>
+        <div class="dotrow" title="completed pomodoros this cycle">
+          ${Array.from({length:state.settings.cyclesBeforeLong},(_,i)=>`<span class="dot ${i < ((p.cycle||0)%state.settings.cyclesBeforeLong)?'on':''}"></span>`).join('')}
+        </div>
+        <div class="sub" style="margin-top:6px">${p.cycle>0 && (p.cycle||0)%state.settings.cyclesBeforeLong===0 ? 'Long break next 🌙' : `Cycle ${(p.cycle||0)%state.settings.cyclesBeforeLong+1} of ${state.settings.cyclesBeforeLong}`}</div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h2>Pair this session</h2>
+          <p class="sub">Completed focus sessions are logged to the subject, tick their paired task, and feed the syllabus progress &amp; charts.</p>
+          <div class="grid g2" style="margin-top:10px">
+            <label class="f">Subject
+              <select data-act="pomo-subject"><option value="">— none —</option>${subjOpts}</select></label>
+            <label class="f">Paired task (today)
+              <select data-act="pomo-task"><option value="">— none —</option>${taskOpts}</select></label>
+          </div>
+          ${p.subjectId ? (()=>{ const s=subjById(p.subjectId); if(!s) return '';
+            const pr=topicProgress(s); return `
+            <div style="margin-top:12px">
+              <div class="row"><span class="chip" style="background:${s.color}22;color:${s.color}">${esc(s.name)}</span>
+                <div class="grow bar"><i style="width:${pr.pct}%;background:${s.color}"></i></div><b>${pr.pct}%</b></div>
+              <div class="sub">Next up: ${esc(nextTopic(s)?.name || 'all topics done 🎉')}</div>
+            </div>`;})() : '<p class="sub" style="margin-top:10px">Pick a subject to see its live syllabus progress here.</p>'}
+        </div>
+        <div class="card">
+          <div class="row wrap">
+            <h2 style="margin:0">Sessions today · ${fmtMin(todayMin)}</h2>
+            <div style="flex:1"></div>
+            <span class="tag">target ${fmtMin(state.settings.dailyTargetMin)}</span>
+          </div>
+          <div class="list" style="margin-top:10px">
+            ${state.sessions.filter(s=>todayISO(new Date(s.at))===todayISO()).slice().reverse().map(s=>{
+              const s2 = subjById(s.subjectId); return `
+              <div class="item"><span class="chip" style="background:${subjColor(s2)}22;color:${subjColor(s2)}">${esc(s2?s2.name:'General')}</span>
+                <div class="grow">${s.minutes}m pomodoro</div><span class="meta">${timeAgo(s.at)}</span></div>`;}).join('')
+              || '<p class="sub">Nothing yet — press ▶ Start to begin your first block.</p>'}
+          </div>
+        </div>
+        <div class="card">
+          <h2>Timer settings</h2>
+          <div class="grid g4">
+            <label class="f">Focus (min)<input type="number" min="5" max="90" value="${state.settings.focusMin}" data-act="set-focus"></label>
+            <label class="f">Short break<input type="number" min="1" max="30" value="${state.settings.breakMin}" data-act="set-break"></label>
+            <label class="f">Long break<input type="number" min="5" max="60" value="${state.settings.longBreakMin}" data-act="set-long"></label>
+            <label class="f">Cycles → long<input type="number" min="2" max="8" value="${state.settings.cyclesBeforeLong}" data-act="set-cycles"></label>
+          </div>
+          <label class="row f" style="flex-direction:row;margin-top:12px;align-items:center">
+            <input type="checkbox" data-act="set-sound" ${state.settings.soundOn?'checked':''} style="width:auto"> Sound &amp; desktop notifications</label>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ============================================================
+   FLASHCARDS — Leitner spaced repetition
+   Rate Hard → box 1 (today), Good → +1 box, Easy → +2 boxes.
+   Due date = today + CARD_INTERVALS[box].
+   ============================================================ */
+let study = null; // {deckId, queue:[cardIds], idx, seen, right}
+
+function renderFlashcards(){
+  const p = $('#panel-flashcards');
+  const dueByDeck = id => { const d = state.decks.find(x=>x.id===id); const now=Date.now();
+    return d ? d.cards.filter(c=>new Date(c.due).getTime()<=now).length : 0; };
+
+  if (study){
+    const deck = state.decks.find(d=>d.id===study.deckId);
+    if (!deck || !deck.cards.some(c=>c.id===study.queue[study.idx])){ study = null; }
+    else return renderStudySession(p, deck);
+  }
+
+  p.innerHTML = `
+    <div class="row" style="margin-bottom:16px">
+      <div class="grow"><h2 style="margin:0;font-size:16px">Flashcards — active recall</h2>
+        <p class="sub" style="margin:2px 0 0">Leitner boxes with spaced repetition: Hard → see it again today, Easy → see it in weeks.</p></div>
+      <button class="btn primary" data-act="add-deck-modal">+ New deck</button>
+      ${state.decks.length ? '<button class="btn" data-act="add-card-modal">+ New card</button>' : ''}
+    </div>
+    ${state.decks.length ? `
+      <div class="deckgrid">
+        ${state.decks.map(d => {
+          const s = subjById(d.subjectId);
+          const due = dueByDeck(d.id);
+          const boxes = [1,2,3,4,5].map(b => d.cards.filter(c=>c.box===b).length);
+          return `<div class="deckcard">
+            <div class="row"><span class="chip" style="background:${subjColor(s)}22;color:${subjColor(s)}">${esc(s?s.name:'General')}</span>
+              <div style="flex:1"></div><span class="tag">${d.cards.length} cards</span></div>
+            <b>${esc(d.name)}</b>
+            <div class="row" style="gap:4px">${boxes.map((n,i)=>`
+              <div style="flex:1;text-align:center"><div class="bar" style="height:6px"><i style="width:${d.cards.length?n/d.cards.length*100:0}%"></i></div>
+              <div class="sub" style="font-size:10px">B${i+1}</div></div>`).join('')}</div>
+            <div class="row">
+              <button class="btn sm ${due?'primary':'ghost'}" data-act="study-deck" data-id="${d.id}" ${d.cards.length?'':'disabled'}>
+                ${due ? `▶ Study ${due} due` : '▶ Study all'}</button>
+              <div style="flex:1"></div>
+              <button class="iconbtn" data-act="del-deck" data-id="${d.id}" title="Delete deck">🗑</button>
+            </div>
+          </div>`;}).join('')}
+      </div>
+      <div class="card" style="margin-top:16px"><h2>All cards</h2>
+        <div class="list" style="margin-top:8px">
+          ${state.decks.flatMap(d => d.cards.map(c => ({d,c}))).slice(0,60).map(({d,c})=>`
+            <div class="item">
+              <span class="tag">${esc(d.name)}</span>
+              <div class="grow"><div class="title">${esc(c.front)}</div></div>
+              <span class="tag">box ${c.box}</span>
+              <span class="meta">due ${c.due <= new Date().toISOString() ? '<b style="color:var(--amber)">now</b>' : fmtDayShort(c.due.slice(0,10))}</span>
+              <button class="iconbtn" data-act="del-card" data-did="${d.id}" data-cid="${c.id}">✕</button>
+            </div>`).join('') || '<p class="sub">No cards yet.</p>'}
+        </div></div>`
+    : `<div class="card"><div class="empty"><div class="big">🃏</div>No decks yet. Create one — or save solved doubts as cards later.<br><br>
+       <button class="btn primary" data-act="add-deck-modal">+ New deck</button></div></div>`}`;
+}
+
+function renderStudySession(p, deck){
+  const card = deck.cards.find(c=>c.id===study.queue[study.idx]);
+  const total = study.queue.length;
+  $('#topbar-title').textContent = `Studying — ${deck.name}`;
+  p.innerHTML = `
+    <div class="card">
+      <div class="row wrap">
+        <button class="btn sm ghost" data-act="end-study">← End session</button>
+        <b>${esc(deck.name)}</b>
+        <span class="tag">card ${study.idx+1} / ${total}</span>
+        <div style="flex:1"></div>
+        <span class="tag">✓ ${study.right}</span>
+        <div class="bar" style="width:160px"><i style="width:${study.idx/total*100}%"></i></div>
+      </div>
+      <div class="study-card ${study.flipped?'flipped':''}" data-act="flip-card">
+        <div class="face front">${esc(card.front)}</div>
+        <div class="face back">${esc(card.back)}</div>
+      </div>
+      <p class="sub" style="text-align:center;margin:4px 0 14px">${study.flipped ? 'How well did you recall it?' : 'Think of the answer, then click the card to flip.'}</p>
+      ${study.flipped ? `
+      <div class="row" style="justify-content:center;gap:12px">
+        <button class="btn danger" data-act="rate-card" data-r="1">😅 Hard</button>
+        <button class="btn" data-act="rate-card" data-r="2">🙂 Good</button>
+        <button class="btn green" data-act="rate-card" data-r="3">😎 Easy</button>
+      </div>` : ''}
+    </div>`;
+}
+
+function startStudy(deckId, dueOnly){
+  const deck = state.decks.find(d=>d.id===deckId); if (!deck || !deck.cards.length) return;
+  const now = Date.now();
+  let cards = dueOnly ? deck.cards.filter(c=>new Date(c.due).getTime()<=now) : deck.cards.slice();
+  if (!cards.length) cards = deck.cards.slice();
+  cards.sort((a,b)=> new Date(a.due)-new Date(b.due));
+  study = { deckId, queue: cards.map(c=>c.id), idx:0, seen:0, right:0, flipped:false };
+  setView('flashcards');
+}
+function flipCard(){ if (!study) return; study.flipped = true; const deck = state.decks.find(d=>d.id===study.deckId); renderStudySession($('#panel-flashcards'), deck); }
+function rateCard(r){
+  if (!study) return;
+  const deck = state.decks.find(d=>d.id===study.deckId);
+  const card = deck.cards.find(c=>c.id===study.queue[study.idx]);
+  const oldBox = card.box;
+  card.box = r===1 ? 1 : clamp(card.box + (r===3?2:1), 1, 5);
+  if (card.box > oldBox) study.right++;
+  card.due = new Date(Date.now() + CARD_INTERVALS[card.box]*DAY).toISOString();
+  study.seen++; study.idx++; study.flipped=false; save();
+  if (study.idx >= study.queue.length){
+    toast(`🎉 Session done — ${study.seen} cards, ${study.right} recalled strong`);
+    study = null;
+  }
+  render();
+}
+
+/* ============================================================
+   CHEATSHEETS — quick revision organizer
+   ============================================================ */
+const BLOCK_TYPES = { formula:'Formula', concept:'Concept', example:'Example', steps:'Method', mistake:'Common mistake', definition:'Definition' };
+
+/* ============================================================
+   DOUBT SOLVER — ask any doubt, get a step-by-step solution
+   ============================================================ */
+let dbFilter = { subject:'all', state:'all' };
+let dbReactOpen = null, dbEmojiOpen = null, dbPendingImg = null, dbPendingTarget = null, dbModalPeople = new Set();
+let dbTab = 'doubts'; // 'doubts' | 'groups' | 'community'
+let dbPersona = 'me'; // 'me' | 'teacher' | person-id — who is typing in the chat
+const DB_REACT_EMOJIS = ['👍','❤️','😂','😮','🙏','🔥'];
+const DB_PICKER_EMOJIS = '😀 😁 😂 🤣 😊 😍 🤔 😐 😴 😎 🥳 😭 😡 🤯 😇 🙃 👍 👎 🙏 👏 💪 🔥 💡 📚 ✏️ 📌 ✅ ❌ ⭐ 🎯 🧠 ☕'.split(' ');
+function dbMeName(){
+  if (dbPersona === 'teacher') return '👩‍🏫 Teacher';
+  const p = (state.people||[]).find(x=>x.id===dbPersona);
+  if (p) return p.name;
+  return (user && user.name) || 'You';
+}
+function dbAvaHtml(name){
+  const cols = ['#7c9cff','#5fd4a8','#f5b942','#f2769b','#9b7cff','#5fc9e8'];
+  const nm = (name || '?').trim();
+  return `<span class="db-ava" style="background:${cols[nm.length % cols.length]}">${esc(nm[0] || '?').toUpperCase()}</span>`;
+}
+function dbPeoplePickerHtml(act){
+  state.people = state.people || [];
+  if (!state.people.length) return `<div class="sub" style="font-size:12px">No classmates yet — add one below.</div>`;
+  return state.people.map(p => `<button class="db-rchip${dbModalPeople.has(p.id)?' on':''}" data-act="${act}" data-pid="${p.id}">${p.role==='teacher'?'👩‍🏫':'🧑‍🎓'} ${esc(p.name)}</button>`).join('');
+}
+function dbAddPersonHtml(nameId, roleId, act){
+  return `<div class="row" style="gap:6px;margin-top:8px;align-items:center">
+    <input id="${nameId}" placeholder="New person's name" style="flex:1;min-width:100px">
+    <select id="${roleId}" style="width:auto"><option value="student">Student</option><option value="teacher">Teacher</option></select>
+    <button class="btn sm" data-act="${act}">＋ Add</button></div>`;
+}
+function dbPeopleModal(did){
+  const d = dbFind(did); if (!d) return;
+  dbModalPeople = new Set(d.people || []);
+  openModal(`<h3>👥 People in this chat</h3>
+    <div class="sub" style="margin:0 0 10px">Tap a person to add or remove them from this doubt chat.</div>
+    <div id="mp-list" class="row wrap" style="gap:6px">${dbPeoplePickerHtml('db-people-tog')}</div>
+    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="db-contacts">📱 Pick from phone contacts</button></div>
+    ${dbAddPersonHtml('mp-name','mp-role','db-people-add')}
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost" data-act="modal-close">Cancel</button>
+      <button class="btn primary" data-act="db-people-save" data-id="${did}">Done</button>
+    </div>`);
+}
+function dbShrinkImg(dataUrl, max){ max = max || 1024; return new Promise(res => { const im = new Image(); im.onload = () => { const sc = Math.min(1, max / Math.max(im.width, im.height)); if (sc >= 1) return res(dataUrl); const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.width * sc)); c.height = Math.max(1, Math.round(im.height * sc)); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', .82)); }; im.onerror = () => res(dataUrl); im.src = dataUrl; }); }
+
+/* ---------- library attachments (photos & PDFs) ---------- */
+const LIB_PDF_MAX = 3 * 1024 * 1024;   // localStorage is ~5MB total — cap PDFs at 3MB
+let libAttDraft = [];                  // pending attachments inside the library modal
+function libFmtSize(n){ return n >= 1048576 ? (n/1048576).toFixed(1)+' MB' : Math.max(1, Math.round(n/1024))+' KB'; }
+function libAddAtts(files){
+  if (!files || !files.length) return;
+  let pending = files.length;
+  const done = () => { if (--pending === 0) libRenderAtts(); };
+  for (const f of files){
+    if (f.size > LIB_PDF_MAX){ toast(`"${f.name}" is too big — max 3 MB per file`); done(); continue; }
+    const r = new FileReader();
+    r.onload = async () => {
+      try {
+        const att = { id:uid(), name:f.name, size:f.size, at:Date.now() };
+        if (/^image\//.test(f.type)){ att.kind = 'img'; att.data = await dbShrinkImg(String(r.result), 1024); att.size = Math.round(att.data.length * .75); }
+        else { att.kind = 'pdf'; att.data = String(r.result); }
+        libAttDraft.push(att);
+      } catch(err){ console.warn('attachment failed', err); }
+      done();
+    };
+    r.onerror = done;
+    r.readAsDataURL(f);
+  }
+}
+function libRenderAtts(){
+  const box = document.getElementById('m-latts'); if (!box) return;
+  box.innerHTML = libAttDraft.length ? libAttDraft.map(a=>libAttRow(a,true)).join('') : '<span style="font-size:12px;color:var(--muted)">No files attached yet</span>';
+}
+function libAttRow(a, inModal){
+  const th = a.kind==='img' ? `<img class="lib-afile" src="${a.data}" alt="" data-act="lib-att-view" data-id="${a.id}">` : `<span class="ic">📄</span>`;
+  return `<div class="lib-att">${th}<span class="nm">${esc(a.name)}</span><span class="sz">${libFmtSize(a.size)}</span>
+    <button class="btn sm ghost" data-act="lib-att-view" data-id="${a.id}">View</button>
+    ${inModal ? `<button class="btn sm danger" data-act="lib-att-del" data-id="${a.id}" title="Remove">✕</button>` : ''}</div>`;
+}
+function libFindAtt(id){ return libAttDraft.find(a=>a.id===id) || (state.library||[]).reduce((f,i)=> f || (i.attachments||[]).find(a=>a.id===id), null) || null; }
+/* ---------- share a note (WhatsApp / email / native share sheet) ---------- */
+async function libShare(id){
+  const it = (state.library||[]).find(x=>x.id===id); if (!it) return;
+  const text = `${it.title}${it.meta ? ' ('+it.meta+')' : ''}\n\n${it.body||''}`;
+  const files = [];
+  for (const a of (it.attachments||[])){
+    try { const b = await (await fetch(a.data)).blob();
+      files.push(new File([b], a.name, { type: a.kind==='pdf' ? 'application/pdf' : 'image/jpeg' })); } catch(e){}
+  }
+  if (navigator.canShare && files.length && navigator.canShare({ files })){
+    try { await navigator.share({ title: it.title, text, files }); toast('Shared ✓'); return; } catch(e){ if (e.name === 'AbortError') return; }
+  }
+  if (navigator.share){ try { await navigator.share({ title: it.title, text }); toast('Shared ✓'); return; } catch(e){ if (e.name === 'AbortError') return; } }
+  openModal(`<h3 style="font-size:15px;margin:0 0 6px">📤 Share “${esc(it.title)}”</h3>
+    <p class="sub" style="margin:0 0 12px">Send the note text via WhatsApp or email. Photos &amp; PDFs attach automatically on phones that support sharing${files.length ? '' : ' — none attached yet'}.</p>
+    <div class="row" style="justify-content:flex-end;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" data-act="modal-close">Close</button>
+      <a class="btn" href="mailto:?subject=${encodeURIComponent(it.title)}&body=${encodeURIComponent(text)}">✉ Email</a>
+      <a class="btn primary" href="https://wa.me/?text=${encodeURIComponent(text)}" target="_blank" rel="noopener">WhatsApp ↗</a>
+    </div>`);
+}
+
+/* ---------- print-friendly PDF export of one note (offline, real PDF) ---------- */
+function pdfAscii(s){ const m = {'—':'-','–':'-','·':'*','→':'->','✓':'v','✕':'x','•':'*','…':'...','β':'B','‘':"'",'’':"'",'“':'"','”':'"','−':'-'};
+  s = String(s||'').replace(/[—–·→✓✕•…β‘’“”−]/g, c=>m[c]); let out='';
+  for (const ch of s){ const c = ch.codePointAt(0); if (c >= 32 && c <= 255) out += ch; } return out; }
+function pdfEsc(s){ return String(s).replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)'); }
+function pdfWrap(s, n){ const out = [];
+  String(s||'').split('\n').forEach(par => { let cur = '';
+    par.split(' ').forEach(w => { const t = cur ? cur+' '+w : w;
+      if (t.length <= n) cur = t;
+      else { if (cur) out.push(cur); if (w.length > n){ let r = w; while (r.length > n){ out.push(r.slice(0,n)); r = r.slice(n); } cur = r; } else cur = w; } });
+    out.push(cur); }); return out; }
+async function libExportPdf(id){
+  const it = (state.library||[]).find(x=>x.id===id); if (!it) return;
+  toast('Building PDF…');
+  const s = subjById(it.subjectId);
+  const imgs = [];
+  for (const a of (it.attachments||[])){
+    if (a.kind !== 'img') continue;
+    try {
+      const im = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = a.data; });
+      if (!im) continue;
+      const sc = Math.min(1, 1200 / Math.max(im.width, im.height));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.width*sc)); c.height = Math.max(1, Math.round(im.height*sc));
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      const durl = c.toDataURL('image/jpeg', .85);
+      imgs.push({ name: a.name, bin: atob(durl.split(',')[1]), w: c.width, h: c.height });
+    } catch(e){ console.warn('img embed failed', e); }
+  }
+  const PW = 612, PH = 792, MX = 48, CW = PW - 2*MX;
+  const items = [
+    ...pdfWrap(pdfAscii(it.title), 46).map(l => ({ k:'t', l })),
+    { k:'m', l: pdfAscii(`${s ? s.name : 'General'} · ${it.kind==='paper' ? 'Previous paper' : 'Important note'}${it.meta ? ' · '+it.meta : ''} · ${new Date(it.updated||Date.now()).toLocaleDateString()}`) },
+    { k:'rule' },
+    ...pdfWrap(pdfAscii(it.body || '(no content)'), 88).map(l => ({ k:'b', l })),
+  ];
+  const pdfs = (it.attachments||[]).filter(a=>a.kind==='pdf');
+  if (imgs.length || pdfs.length){
+    items.push({ k:'h2', l:'Attachments' });
+    imgs.forEach(im => items.push({ k:'img', im }));
+    pdfs.forEach(a => items.push({ k:'att', l: `PDF  ${a.name}  (${libFmtSize(a.size)}) - open it in ..STUDY BUDDYYY.. to view or download` }));
+  }
+  const pages = []; let ops = '', y = PH - 56;
+  const txt = (x,yy,size,font,gray,str) => { ops += `BT /${font} ${size} Tf ${gray} g ${x} ${yy} Td (${pdfEsc(str)}) Tj ET\n`; };
+  const newPage = () => { pages.push(ops); ops = ''; y = PH - 56; };
+  let imgNo = 0;
+  for (const it2 of items){
+    let h = 0;
+    if (it2.k==='t') h = 24; else if (it2.k==='m') h = 16; else if (it2.k==='rule') h = 12;
+    else if (it2.k==='b') h = 15; else if (it2.k==='h2') h = 24; else if (it2.k==='att') h = 14;
+    else if (it2.k==='img'){ const r = it2.im.h / it2.im.w; let dw = CW, dh = CW*r; if (dh > 330){ dh = 330; dw = 330/r; } it2.dw = dw; it2.dh = dh; h = dh + 16; }
+    if (y - h < 52) newPage();
+    if (it2.k==='t'){ y -= 20; txt(MX, y, 15, 'F2', '0 0 0', it2.l); y -= 4; }
+    else if (it2.k==='m'){ y -= 12; txt(MX, y, 9, 'F1', '0.45 0.45 0.55', it2.l); }
+    else if (it2.k==='rule'){ y -= 6; ops += `0.8 G 0.7 w ${MX} ${y} m ${PW-MX} ${y} l S\n`; y -= 6; }
+    else if (it2.k==='b'){ y -= 15; txt(MX, y, 10.5, 'F1', '0 0 0', it2.l); }
+    else if (it2.k==='h2'){ y -= 20; txt(MX, y, 11.5, 'F2', '0 0 0', it2.l); }
+    else if (it2.k==='att'){ y -= 14; txt(MX, y, 9.5, 'F1', '0.3 0.3 0.4', pdfAscii(it2.l)); }
+    else if (it2.k==='img'){ imgNo++; y -= it2.dh;
+      ops += `q ${it2.dw.toFixed(1)} 0 0 ${it2.dh.toFixed(1)} ${MX} ${y.toFixed(1)} cm /Im${imgNo} Do Q\n`;
+      ops += `0.85 G 0.6 w ${MX} ${y.toFixed(1)} m ${MX+it2.dw} ${y.toFixed(1)} l ${MX+it2.dw} ${(y+it2.dh).toFixed(1)} l ${MX} ${(y+it2.dh).toFixed(1)} l h S\n`;
+      y -= 16; txt(MX, y, 8, 'F1', '0.45 0.45 0.55', pdfAscii(it2.im.name)); }
+  }
+  newPage();
+  pages.forEach((o, i) => { const d = pages.length; ops = o;
+    txt(MX, 32, 7.5, 'F1', '0.55 0.55 0.65', `..STUDY BUDDYYY.. (Sbeta) · ${d>1 ? 'page '+(i+1)+' of '+d : new Date().toLocaleDateString()}`); pages[i] = ops; ops = ''; });
+  const objs = []; const addO = (dict, stream) => { objs.push({ dict, stream }); return objs.length; };
+  imgs.forEach(im => { addO(`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.bin.length} >>`, im.bin); });
+  const F1 = addO('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  const F2 = addO('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const xo = imgs.length ? ` /XObject << ${imgs.map((_,i)=>`/Im${i+1} ${i+1} 0 R`).join(' ')} >>` : '';
+  const pageObjs = pages.map(st => {
+    const cNum = addO(`<< /Length ${st.length} >>`, st);
+    return addO(`<< /Type /Page /Parent PAGES 0 R /MediaBox [0 0 ${PW} ${PH}] /Resources << /Font << /F1 ${F1} 0 R /F2 ${F2} 0 R >>${xo} >> /Contents ${cNum} 0 R >>`);
+  });
+  const pagesNum = addO(`<< /Type /Pages /Kids [${pageObjs.map(n=>n+' 0 R').join(' ')}] /Count ${pageObjs.length} >>`);
+  objs.forEach(o => { if (o.dict.includes('/Parent PAGES 0 R')) o.dict = o.dict.replace('/Parent PAGES 0 R', '/Parent '+pagesNum+' 0 R'); });
+  const root = addO(`<< /Type /Catalog /Pages ${pagesNum} 0 R >>`);
+  let pdf = '%PDF-1.4\n'; const offs = [];
+  objs.forEach((o, i) => { offs.push(pdf.length);
+    pdf += (i+1)+' 0 obj\n'+o.dict+'\n'+(o.stream != null ? 'stream\n'+o.stream+'\nendstream\n' : '')+'endobj\n'; });
+  const xref = pdf.length;
+  pdf += 'xref\n0 '+(objs.length+1)+'\n0000000000 65535 f \n' + offs.map(o=>String(o).padStart(10,'0')+' 00000 n \n').join('');
+  pdf += 'trailer\n<< /Size '+(objs.length+1)+' /Root '+root+' 0 R >>\nstartxref\n'+xref+'\n%%EOF';
+  const bytes = new Uint8Array(pdf.length); for (let i=0;i<pdf.length;i++) bytes[i] = pdf.charCodeAt(i) & 0xFF;
+  const url = URL.createObjectURL(new Blob([bytes], { type:'application/pdf' }));
+  libBlobUrl = url;
+  const fname = (it.title || 'note').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase() || 'note';
+  const a = document.createElement('a'); a.href = url; a.download = `studybuddy-${fname}.pdf`; document.body.appendChild(a); a.click(); a.remove();
+  openModal(`<h3 style="margin:0 0 6px;font-size:15px">📄 PDF ready — ${esc(it.title)}</h3>
+    <p class="sub" style="margin:0 0 14px">${pageObjs.length} page${pageObjs.length===1?'':'s'} · ${imgs.length} photo${imgs.length===1?'':'s'} embedded · print-friendly A/Letter layout.</p>
+    <div class="row" style="justify-content:flex-end;gap:8px">
+      <button class="btn ghost" data-act="modal-close">Close</button>
+      <a class="btn primary" href="${url}" download="studybuddy-${fname}.pdf">⬇ Save PDF</a>
+    </div>`);
+  return { pages: pageObjs.length, imgs: imgs.length, kb: Math.round(bytes.length/1024) };
+}
+
+let libBlobUrl = null;
+function libViewAtt(id){
+  const a = libFindAtt(id); if (!a) return;
+  if (a.kind === 'img') return openModal(`<img src="${a.data}" style="max-width:100%;max-height:72vh;border-radius:12px" alt="${esc(a.name)}">`, {wide:true});
+  // PDFs: no inline iframe (the built-in PDF plugin can freeze the page) — hand the file to the user instead
+  fetch(a.data).then(r=>r.blob()).then(b=>{
+    libBlobUrl = URL.createObjectURL(b); const url = libBlobUrl;
+    openModal(`<h3 style="margin:0 0 6px;font-size:15px">📄 ${esc(a.name)}</h3>
+      <p class="sub" style="margin:0 0 14px">PDF · ${libFmtSize(a.size)} — open it in a new tab or save it to your device.</p>
+      <div class="row" style="justify-content:flex-end;gap:8px">
+        <button class="btn ghost" data-act="modal-close">Close</button>
+        <a class="btn" href="${url}" download="${esc(a.name)}">⬇ Download</a>
+        <a class="btn primary" href="${url}" target="_blank" rel="noopener">Open in new tab ↗</a>
+      </div>`, {wide:true});
+  }).catch(()=>toast('Could not open that file'));
+}
+function dbReactsRow(d, mid){
+  const map = ((d.reacts||{})[mid]) || {};
+  const me = (user && user.name) || 'You';
+  const chips = Object.keys(map).filter(e => (map[e]||[]).length).map(e =>
+    `<button class="db-rchip${(map[e]||[]).includes(me)?' on':''}" data-act="db-react" data-id="${d.id}" data-mid="${mid}" data-emoji="${e}" title="${esc((map[e]||[]).join(', '))}">${e} ${map[e].length}</button>`).join('');
+  const bar = dbReactOpen === mid ? `<span class="db-rbar">${DB_REACT_EMOJIS.map(e =>
+    `<button class="db-rchip" data-act="db-react" data-id="${d.id}" data-mid="${mid}" data-emoji="${e}">${e}</button>`).join('')}</span>` : '';
+  const plus = `<button class="db-rchip" data-act="db-react-open" data-id="${d.id}" data-mid="${mid}" title="Add reaction">😊+</button>`;
+  return `<div class="db-reactrow">${bar}${plus}${chips}</div>`;
+}
+function dbPollHtml(d, n){
+  const me = (user && user.name) || 'You';
+  const opts = n.poll.options || [];
+  const total = opts.reduce((s,o)=>s+(o.votes||[]).length, 0);
+  const rows = opts.map((o,i)=>{
+    const mine = (o.votes||[]).includes(me); const pct = Math.round(100*(o.votes||[]).length/(total||1));
+    return `<button class="db-popt${mine?' mine':''}" data-act="db-poll-vote" data-id="${d.id}" data-mid="${n.id}" data-oi="${i}" title="${mine?'Tap again to remove your vote':'Tap to vote'}">
+      <span class="bar" style="width:${pct}%"></span>
+      <span class="lbl"><span>${mine?'<span class="tick">✓ </span>':''}${esc(o.text)}</span><span class="pct">${(o.votes||[]).length||''} ${pct}%</span></span>
+    </button>`;}).join('');
+  return `<div class="db-poll"><div class="pq">📊 ${esc(n.poll.q)}</div>${rows}<div class="pv">${total} vote${total===1?'':'s'} · tap an option to vote</div></div>`;
+}
+function dbMsgHtml(d, n){
+  if ((d.hidden||{})[n.id]) return '';   // “only on my phone” removed messages
+  const mine = n.pid ? false : (n.role === 'teacher' ? true : (n.name === ((user && user.name) || 'You')));
+  const teach = n.role === 'teacher' && !n.pid;
+  return `<div class="db-msg ${mine?'me':'left'}${teach?' teach':''}" data-mid="${n.id}" data-did="${d.id}">
+    <div class="db-bubble">
+      <div class="db-bmeta">${mine ? '' : dbAvaHtml(n.name)}<span class="who">${esc(n.name||'You')}</span><span>· ${timeAgo(n.at||Date.now())}</span></div>
+      ${n.poll ? dbPollHtml(d, n) : ''}
+      ${n.text ? `<div>${mdLite(n.text)}</div>` : ''}
+      ${n.img ? `<img class="db-bimg" src="${n.img}" data-act="db-img" alt="photo" title="Click to enlarge">` : ''}
+    </div>
+    ${dbReactsRow(d, n.id)}
+  </div>`;
+}
+function dbEmojiPopHtml(){
+  return `<div class="db-emoji-pop">${DB_PICKER_EMOJIS.map(e => `<button class="db-eb" data-act="db-emoji-pick" data-emoji="${e}">${e}</button>`).join('')}</div>`;
+}
+function dbAddMsg(d, entry){ (d.notes = d.notes || []).push(entry); save(); renderDoubts(); }
+function dbDeleteMsg(did, cid){
+  const d = dbFind(did); if (!d) return;
+  d.notes = (d.notes||[]).filter(c=>c.id!==cid);
+  if (d.reacts && d.reacts[cid]){ delete d.reacts[cid]; if (!Object.keys(d.reacts).length) delete d.reacts; }
+  if (d.hidden && d.hidden[cid]){ delete d.hidden[cid]; if (!Object.keys(d.hidden).length) delete d.hidden; }
+  save(); renderDoubts();
+}
+/* press-and-hold a message bubble to delete it (WhatsApp-style, mouse + touch) */
+let dbLpTimer = null, dbLpFired = false;
+document.addEventListener('pointerdown', e => {
+  const msg = e.target.closest && e.target.closest('.db-msg[data-mid]');
+  if (!msg || e.target.closest('button, a, input, textarea, select')) return; // buttons keep normal clicks
+  const did = msg.dataset.did, cid = msg.dataset.mid, x0 = e.clientX, y0 = e.clientY;
+  clearTimeout(dbLpTimer); dbLpFired = false;
+  const end = () => {
+    clearTimeout(dbLpTimer); dbLpTimer = null;
+    document.removeEventListener('pointerup', end);
+    document.removeEventListener('pointercancel', end);
+    document.removeEventListener('pointermove', move);
+  };
+  const move = ev => { if (Math.abs(ev.clientX-x0) > 10 || Math.abs(ev.clientY-y0) > 10) end(); };
+  document.addEventListener('pointerup', end);
+  document.addEventListener('pointercancel', end);
+  document.addEventListener('pointermove', move);
+  dbLpTimer = setTimeout(() => {
+    end(); dbLpFired = true;                      // swallow the click that follows the hold
+    setTimeout(()=>{ dbLpFired = false; }, 500);  // …but only clicks right after it
+    if (navigator.vibrate){ try { navigator.vibrate(30); } catch(err){} }
+    openModal(`<h3 style="font-size:15px;margin:0 0 8px">Delete this message?</h3>
+      <p class="sub" style="margin:0 0 14px">Remove it just from your phone, or for everyone in this chat.</p>
+      <div class="row" style="justify-content:flex-end;gap:8px;flex-wrap:wrap">
+        <button class="btn ghost" data-act="modal-close">Cancel</button>
+        <button class="btn" data-act="db-del-mine" data-did="${did}" data-cid="${cid}">📱 Only on my phone</button>
+        <button class="btn danger" data-act="db-del-all" data-did="${did}" data-cid="${cid}">🌍 For everyone</button>
+      </div>`);
+  }, 550);
+});
+document.addEventListener('click', e => {         // a finished long-press must not also click
+  if (dbLpFired){ e.preventDefault(); e.stopPropagation(); dbLpFired = false; }
+}, true);
+document.addEventListener('contextmenu', e => {   // hold opens delete, not the browser menu
+  if (e.target.closest && e.target.closest('.db-msg')) e.preventDefault();
+});
+function dbFind(id){ return (state.doubts||[]).find(x=>x.id===id) || (state.groups||[]).find(x=>x.id===id) || (id==='community' ? (state.community||null) : null); }
+function dbTabBar(){
+  const t = (id,lbl) => `<button class="btn sm ${dbTab===id?'':'ghost'}" data-act="db-tab" data-tab="${id}">${lbl}</button>`;
+  const gn = (state.groups||[]).length;
+  return `<div class="row" style="gap:6px;margin-bottom:14px">${t('doubts','💬 Doubts')}${t('groups',`👥 Groups${gn?' · '+gn:''}`)}${t('community','🌐 Community')}</div>`;
+}
+function dbInputRow(d){
+  const pNow = (state.people||[]).find(x=>x.id===dbPersona);
+  const ph = dbPersona==='teacher' ? 'Reply as teacher…' : (pNow ? ('Message as ' + pNow.name + '…') : 'Message the class…');
+  return `
+        ${(dbPendingImg && dbPendingImg.did===d.id) ? `<div class="db-pend"><img src="${dbPendingImg.img}" alt="attached photo"><span>Photo ready — add a caption or just send ➤</span><button class="iconbtn" data-act="db-pend-x" data-id="${d.id}" title="Remove photo">✕</button></div>` : ''}
+        ${dbEmojiOpen===d.id ? dbEmojiPopHtml() : ''}
+        <div class="db-inrow">
+          <button class="db-ebtn" data-act="db-persona" data-id="${d.id}" title="Switch who is sending: you → teacher → people">${dbPersona==='teacher'?'👩‍🏫':(pNow ? dbAvaHtml(pNow.name) : '🧑‍🎓')}</button>
+          <button class="db-ebtn" data-act="db-pick-msg" data-id="${d.id}" data-mode="cam" title="Take a photo with the camera">📷</button>
+          <button class="db-ebtn" data-act="db-pick-msg" data-id="${d.id}" data-mode="gal" title="Attach a photo">🖼️</button>
+          <button class="db-ebtn" data-act="db-poll-modal" data-id="${d.id}" title="Create a poll">📊</button>
+          <button class="db-ebtn${dbEmojiOpen===d.id?' act':''}" data-act="db-emoji-open" data-id="${d.id}" title="Emoji">😊</button>
+          <input class="db-cin" data-did="${d.id}" placeholder="${ph}" style="flex:1;min-width:70px">
+          <button class="btn sm" data-act="db-send" data-id="${d.id}" title="Send">➤</button>
+        </div>`;
+}
+function dbWireInputs(keepVals){
+  $$('.db-cin').forEach(ci => { const v = keepVals[ci.dataset.did]; if (v) ci.value = v; });
+  $$('.db-cin').forEach(ci => ci.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); dbSendMsg(ci.dataset.did); }
+  }));
+  const mf = $('#db-msgfile');
+  if (mf) mf.addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0]; mf.value = '';
+    if (!f || !dbPendingTarget) return;
+    if (f.size > 8 * 1024 * 1024) return toast('Photo too large (max 8MB)');
+    const r = new FileReader();
+    r.onload = async () => { dbPendingImg = { did: dbPendingTarget, img: await dbShrinkImg(String(r.result)) }; renderDoubts(); };
+    r.readAsDataURL(f);
+  });
+}
+async function dbPickContacts(){
+  if (!navigator.contacts || !navigator.contacts.select){ toast('📱 Contact picker not available here — add people manually below'); return; }
+  try {
+    const picked = await navigator.contacts.select(['name'], { multiple:true });
+    if (!picked || !picked.length) return;
+    let n = 0;
+    picked.forEach(c => { const nm = (c.name && c.name[0]) || ''; if (nm){ const p = { id:uid(), name:nm, role:'student' }; state.people.push(p); dbModalPeople.add(p.id); n++; } });
+    if (n) save();
+    const list = $('#m-people-list') || $('#mp-list');
+    if (list) list.innerHTML = dbPeoplePickerHtml(list.id==='mp-list' ? 'db-people-tog' : 'db-modal-person');
+    toast(n + ' contact' + (n===1?'':'s') + ' added 📱');
+  } catch(err){ /* user cancelled */ }
+}
+function dbGroupCard(g){
+  const ppl = (g.people||[]).map(pid=>(state.people||[]).find(x=>x.id===pid)).filter(Boolean);
+  return `<div class="card db-card">
+    <div class="row wrap">
+      <span class="db-q grow">👥 ${esc(g.name)}</span>
+      <button class="iconbtn" data-act="db-people-modal" data-id="${g.id}" title="Add / remove members" style="width:26px;height:26px">＋</button>
+      <button class="btn sm danger" data-act="db-del-group" data-id="${g.id}">✕</button>
+    </div>
+    <div class="row wrap" style="gap:5px;margin-top:6px;align-items:center">
+      <span class="tag" style="color:var(--muted)">${ppl.length} member${ppl.length===1?'':'s'}</span>
+      ${ppl.map(p=>`<span class="tag">${p.role==='teacher'?'👩‍🏫':'🧑‍🎓'} ${esc(p.name)}</span>`).join('')}
+      ${!ppl.length ? '<span class="tag" style="color:var(--muted)">no members yet — tap ＋</span>' : ''}
+    </div>
+    <div class="db-thread">${(g.notes||[]).length ? (g.notes||[]).map(n=>dbMsgHtml(g,n)).join('') : '<div class="sub">No messages yet — start the group chat! 👋</div>'}</div>
+    ${dbInputRow(g)}
+  </div>`;
+}
+function renderGroups(p){
+  state.groups = state.groups || []; state.people = state.people || [];
+  const keepVals = {}; $$('.db-cin').forEach(ci => { if (ci.dataset.did && ci.value) keepVals[ci.dataset.did] = ci.value; });
+  const items = state.groups.slice().sort((a,b)=>(b.created||0)-(a.created||0));
+  p.innerHTML = `
+    <div class="row" style="margin-bottom:16px">
+      <div class="grow"><h2 style="margin:0;font-size:16px">Doubt Solver</h2>
+        <p class="sub" style="margin:2px 0 0">Private groups — pick exactly who's in from your contacts, then chat with camera, polls, emoji & reactions.</p></div>
+      <button class="btn primary" data-act="db-group-modal">＋ New group</button>
+    </div>
+    ${dbTabBar()}
+    <input id="db-msgfile" type="file" accept="image/*" style="display:none">
+    ${items.length ? items.map(g=>dbGroupCard(g)).join('') : `
+      <div class="card"><div class="empty" style="margin-top:8px"><div class="big">👥</div>
+        No groups yet — create one and add people from your contacts.
+        <br><br><button class="btn primary" data-act="db-group-modal">＋ New group</button></div></div>`}`;
+  dbWireInputs(keepVals);
+}
+function renderCommunity(p){
+  state.community = state.community || { joined:false, msgs:[], reacts:{} };
+  const c = state.community; c.reacts = c.reacts || {}; c.id = 'community';
+  if (c.msgs && c.msgs.length && !(c.notes||[]).length) c.notes = c.msgs;
+  delete c.msgs; c.notes = c.notes || [];
+  const keepVals = {}; $$('.db-cin').forEach(ci => { if (ci.dataset.did && ci.value) keepVals[ci.dataset.did] = ci.value; });
+  const posters = [...new Set(c.notes.map(m=>m.name))];
+  p.innerHTML = `
+    <div class="row" style="margin-bottom:16px">
+      <div class="grow"><h2 style="margin:0;font-size:16px">Doubt Solver</h2>
+        <p class="sub" style="margin:2px 0 0">The open community — anyone can join, ask doubts, share notes and help others.</p></div>
+    </div>
+    ${dbTabBar()}
+    <input id="db-msgfile" type="file" accept="image/*" style="display:none">
+    <div class="card db-card">
+      <div class="row wrap">
+        <span class="db-q grow">🌐 Study Community</span>
+        ${c.joined ? '<span class="tag" style="color:var(--green)">✓ joined</span>' : `<button class="btn sm primary" data-act="db-join-community">Join community</button>`}
+      </div>
+      <div class="sub" style="font-size:12px;margin-top:4px">Open to everyone — no invites needed. Students & teachers ask, answer and share.</div>
+      <div class="row wrap" style="gap:5px;margin-top:8px;align-items:center">
+        <span class="tag" style="color:var(--muted)">${posters.length} voice${posters.length===1?'':'s'}</span>
+        ${posters.map(nm=>`<span class="tag">${dbAvaHtml(nm)} ${esc(nm)}</span>`).join('')}
+      </div>
+      <div class="db-thread">
+        ${c.notes.length ? c.notes.map(n=>dbMsgHtml(c,n)).join('') : '<div class="sub">No messages yet — be the first to say hello! 👋</div>'}
+      </div>
+      ${c.joined ? dbInputRow(c) : '<div class="sub" style="margin-top:10px">Join the community to post messages, photos and polls.</div>'}
+    </div>`;
+  dbWireInputs(keepVals);
+}
+function dbSendMsg(did){
+  const d = dbFind(did); if (!d) return;
+  const box = document.querySelector(`.db-cin[data-did="${did}"]`);
+  const text = (box && box.value || '').trim();
+  const hasPend = !!(dbPendingImg && dbPendingImg.did===did && dbPendingImg.img);
+  if (!text && !hasPend) return;
+  const pNow = (state.people||[]).find(x=>x.id===dbPersona);
+  const entry = { id:uid(), name:dbMeName(), role: dbPersona==='teacher' ? 'teacher' : (pNow ? pNow.role : 'student'), at:Date.now() };
+  if (pNow) entry.pid = pNow.id;
+  if (text) entry.text = text;
+  if (hasPend){ entry.img = dbPendingImg.img; dbPendingImg = null; }
+  dbReactOpen = null; dbEmojiOpen = null;
+  dbAddMsg(d, entry);
+  const nb = document.querySelector(`.db-cin[data-did="${did}"]`); if (nb) nb.focus();
+}
+function doubtSubject(text, prefer){
+  const t = text.toLowerCase();
+  const named = state.subjects.find(s => s.name && t.includes(s.name.toLowerCase()));
+  if (named) return named.id;
+  if (prefer && subjById(prefer)) return prefer;
+  const vocab = /(math|equation|integral|derivative|trig|algebra|geometry|probab|physic|force|energy|chemis|biolog|histor|geograph|econom|comput)/i;
+  const byName = state.subjects.find(s => vocab.test(s.name || ''));
+  return byName ? byName.id : (state.subjects[0] || {}).id;
+}
+function extractTags(q){
+  const stop = new Set('what why how when where which who this that with without from into their there then them they have has had will would could should about above below over under again once only just also very can will just dont doesnt didnt isnt arent wasnt werent been being been some such than then once here more most other into over under explain define solve derive prove tell show your'.split(' '));
+  return [...new Set(q.toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/)
+    .filter(w => w.length > 3 && !stop.has(w) && !/^\d+$/.test(w)))]
+    .slice(0,3).map(w => w[0].toUpperCase() + w.slice(1));
+}
+function solveDoubt(text, subjectId){
+  const q = text.replace(/\s+/g,' ').trim();
+  const lower = q.toLowerCase();
+  const t = q.replace(/^(what|why|how|when|where|which|who|explain|define|solve|derive|prove|tell me about|can you explain)[\s:]+/i,'').replace(/\?+$/,'').trim();
+  const s = subjById(doubtSubject(q, subjectId));
+  const subject = s ? s.name.toLowerCase() : '';
+  const looksNum = /\d/.test(q) && /(find|solve|calculate|how (much|far|fast|long|many)|what is the (value|speed|distance|area|force|velocity|acceleration)|evaluate)/.test(lower);
+  let steps;
+  if (looksNum){
+    steps = [
+      '**Understand** — list what is given and what is asked. Write every value with its unit (e.g. u = 20 m/s, find a).',
+      '**Choose the tool** — pick the formula/rule that connects the given quantities to the asked one. Mentions time? Use the time-based form; avoids time? Use the form without it.',
+      '**Substitute & solve** — insert values step by step, keep units in every line, and watch the sign (+/−).',
+      '**Check** — is the magnitude sensible? Does the unit match what was asked? One line on why the answer makes sense earns method marks.' ];
+  } else if (/(why|reason)/.test(lower)){
+    steps = [
+      '**Claim** — state the direct answer in one line first.',
+      '**Because** — give the rule, law or definition behind it in your own words.',
+      '**Link** — connect that rule to this exact question: what changes, what stays fixed.',
+      '**Example** — one quick example; showing the opposite case failing proves the rule.' ];
+  } else if (/(difference|compare|vs\b|versus|distinguish)/.test(lower)){
+    steps = [
+      '**Define both** — one line each, in your own words.',
+      '**Compare in rows** — basis (definition / formula / example / where used) against the two items.',
+      '**Takeaway** — the single most exam-asked contrast, in one line.' ];
+  } else if (/(derive|prove|show that)/.test(lower)){
+    steps = [
+      '**Start from** — write the accepted law/definition you may assume, by name.',
+      '**Each step = one idea** — justify every line with the rule used; this is where the marks live.',
+      '**Arrive** — box the final expression exactly in the form asked ("show that …").',
+      '**Assumptions** — state the conditions (constant acceleration, ideal gas, frictionless…).' ];
+  } else if (/(define|what is|what are|meaning)/.test(lower)){
+    steps = [
+      '**One-line definition** — exact and dense; this is what the mark scheme scans for.',
+      '**Key terms** — define each keyword inside the definition in 3–5 words.',
+      '**Formula or diagram** — attach the standard formula or a labelled sketch.',
+      '**Example** — one concrete instance; definition + example is the full-mark pattern.' ];
+  } else {
+    steps = [
+      `**Break it down** — split “${t || q}” into 2–3 smaller sub-questions and answer them in order.`,
+      '**Core idea** — name the chapter/topic this belongs to and state its main rule.',
+      '**Work an example** — apply the rule to a simple case to see the pattern clearly.',
+      '**Exam angle** — prepare it both ways: a 2-mark direct question and a 5-mark application.' ];
+  }
+  const tips = { math:'Write every step — method marks beat the final answer.', mathematics:'Write every step — method marks beat the final answer.',
+    physics:'Units and signs carry marks — carry them through every line.',
+    chemistry:'Balance equations first; state conditions (temperature, catalyst) wherever relevant.',
+    biology:'Use the exact textbook terms — loose synonyms often lose the mark.',
+    history:'Answer = point + evidence + why it mattered. Dates are your evidence.',
+    geography:'Quote a fact, a figure and a place name in every answer.' };
+  const tipKey = Object.keys(tips).find(k => subject.includes(k));
+  let a = `**Quick answer:** ${t || q} — work the steps below and say them aloud as you go.\n\n` + steps.join('\n\n') + `\n\n**Golden rule:** re-attempt this same question tomorrow from memory — that is what converts a doubt into marks.`;
+  if (tipKey) a += `\n\n**${s ? s.name : 'Subject'} tip:** ${tips[tipKey]}`;
+  return { subjectId: s ? s.id : null, q, a, tags: extractTags(q), solved:true };
+}
+function renderDoubts(){
+  const p = $('#panel-doubts');
+  if (dbTab === 'groups') return renderGroups(p);
+  if (dbTab === 'community') return renderCommunity(p);
+  const keepVals = {}; $$('.db-cin').forEach(ci => { if (ci.dataset.did && ci.value) keepVals[ci.dataset.did] = ci.value; });
+  state.doubts = state.doubts || [];
+  state.people = state.people || [];
+  const q = (dbFilter.q || '').toLowerCase();
+  const items = state.doubts
+    .filter(d => (dbFilter.subject==='all' || d.subjectId===dbFilter.subject)
+              && (dbFilter.state==='all' || (dbFilter.state==='solved' ? d.solved : !d.solved))
+              && (!q || (d.q + ' ' + (d.a||'') + ' ' + (d.notes||[]).map(n=>(n.text||'') + ' ' + ((n.poll||{}).q||'')).join(' ')).toLowerCase().includes(q)))
+    .sort((a,b)=>(b.created||0)-(a.created||0));
+  p.innerHTML = `
+    <div class="row" style="margin-bottom:16px">
+      <div class="grow"><h2 style="margin:0;font-size:16px">Doubt Solver</h2>
+        <p class="sub" style="margin:2px 0 0">A WhatsApp-style class chat for every doubt — pick who's in, then message, send photos from the camera, create polls and react.</p></div>
+      <button class="btn primary" data-act="add-doubt-modal">＋ Ask a doubt</button>
+    </div>
+    ${dbTabBar()}
+    <div style="margin-bottom:14px"><input id="db-search" data-act="db-search" placeholder="Search your doubts…" value="${esc(dbFilter.q||'')}" style="width:100%"></div>
+    <input id="db-msgfile" type="file" accept="image/*" style="display:none">
+    ${items.length ? items.map(d => {
+      const s = subjById(d.subjectId); const col = s ? s.color : '#6c8cff';
+      const pNow = (state.people||[]).find(x=>x.id===dbPersona);
+      const ph = dbPersona==='teacher' ? 'Reply as teacher…' : (pNow ? ('Message as ' + pNow.name + '…') : 'Message the class…');
+      const ppl = (d.people||[]).map(pid => (state.people||[]).find(x=>x.id===pid)).filter(Boolean);
+      const pplHtml = ppl.length
+        ? ppl.map(p=>`<span class="tag">${p.role==='teacher'?'👩‍🏫':'🧑‍🎓'} ${esc(p.name)}</span>`).join('')
+        : '<span class="tag" style="color:var(--muted)">no one yet — add classmates & teachers</span>';
+      return `<div class="card db-card">
+        <div class="row wrap">
+          <span class="db-q grow">${esc(d.q)}</span>
+          ${d.solved ? '<span class="tag" style="color:var(--green)">✅ solved</span>' : '<span class="tag" style="color:var(--amber)">🔴 stuck</span>'}
+          <button class="btn sm ghost" data-act="toggle-doubt-solved" data-id="${d.id}">${d.solved ? 'Mark stuck' : 'Mark solved'}</button>
+          <button class="btn sm ghost" data-act="copy-doubt" data-id="${d.id}">⧉ Copy</button>
+          <button class="btn sm ghost" data-act="edit-doubt" data-id="${d.id}">✎ Edit</button>
+          <button class="btn sm danger" data-act="del-doubt" data-id="${d.id}">✕</button>
+        </div>
+        <div class="row wrap" style="gap:6px;margin-top:6px">
+          <span class="chip" style="background:${col}22;color:${col};padding:3px 10px;font-size:12px">${s?esc(s.name):'General'}</span>
+          ${(d.tags||[]).map(tg=>`<span class="tag">#${esc(tg)}</span>`).join('')}
+        </div>
+        <div class="row wrap" style="gap:5px;margin-top:6px;align-items:center">
+          <span class="tag" style="color:var(--muted)">👥</span>
+          ${pplHtml}
+          <button class="iconbtn" data-act="db-people-modal" data-id="${d.id}" title="Add / remove people" style="width:22px;height:22px;font-size:11px">＋</button>
+        </div>
+        <div class="db-thread">
+          <div class="db-msg q">
+            <div class="db-bubble">
+              <div class="db-bmeta"><span class="who">❓ Doubt</span><span>· ${timeAgo(d.created||Date.now())}</span></div>
+              <div style="font-weight:600;color:var(--text)">${esc(d.q)}</div>
+              ${d.qImg ? `<img class="db-bimg" src="${d.qImg}" data-act="db-img" alt="question photo" title="Click to enlarge">` : ''}
+            </div>
+          </div>
+          ${(d.myAns || d.myAnsImg) ? `<div class="db-msg me">
+            <div class="db-bubble">
+              <div class="db-bmeta"><span class="who">🙋 ${(user&&user.name)||'You'}</span><span>· written answer</span></div>
+              ${d.myAns ? `<div>${mdLite(d.myAns)}</div>` : ''}
+              ${d.myAnsImg ? `<img class="db-bimg" src="${d.myAnsImg}" data-act="db-img" alt="your answer" title="Click to enlarge">` : ''}
+            </div>
+            ${dbReactsRow(d, 'me')}
+          </div>` : ''}
+          ${(d.notes||[]).map(n=>dbMsgHtml(d,n)).join('')}
+        </div>
+        <div class="row" style="gap:6px;margin-top:8px">
+          <button class="btn sm ghost" data-act="db-answer-modal" data-id="${d.id}">${(d.myAns||d.myAnsImg) ? '✎ Edit your written answer' : '✍ Post a written answer'}</button>
+        </div>
+        ${(dbPendingImg && dbPendingImg.did===d.id) ? `<div class="db-pend"><img src="${dbPendingImg.img}" alt="attached photo"><span>Photo ready — add a caption or just send ➤</span><button class="iconbtn" data-act="db-pend-x" data-id="${d.id}" title="Remove photo">✕</button></div>` : ''}
+        ${dbEmojiOpen===d.id ? dbEmojiPopHtml() : ''}
+        <div class="db-inrow">
+          <button class="db-ebtn" data-act="db-persona" data-id="${d.id}" title="Switch who is sending: you → teacher → classmates">${dbPersona==='teacher'?'👩‍🏫':(pNow ? dbAvaHtml(pNow.name) : '🧑‍🎓')}</button>
+          <button class="db-ebtn" data-act="db-pick-msg" data-id="${d.id}" data-mode="cam" title="Take a photo with the camera">📷</button>
+          <button class="db-ebtn" data-act="db-pick-msg" data-id="${d.id}" data-mode="gal" title="Attach a photo">🖼️</button>
+          <button class="db-ebtn" data-act="db-poll-modal" data-id="${d.id}" title="Create a poll">📊</button>
+          <button class="db-ebtn${dbEmojiOpen===d.id?' act':''}" data-act="db-emoji-open" data-id="${d.id}" title="Emoji">😊</button>
+          <input class="db-cin" data-did="${d.id}" placeholder="${ph}" style="flex:1;min-width:70px">
+          <button class="btn sm" data-act="db-send" data-id="${d.id}" title="Send">➤</button>
+        </div>
+      </div>`;}).join('') : `
+      <div class="card"><div class="empty" style="margin-top:8px"><div class="big">🙋</div>
+        ${state.doubts.length ? 'No doubts match this filter.' : 'No doubts yet — the next time you are stuck, ask here instead of skipping it.'}
+        <br><br><button class="btn primary" data-act="add-doubt-modal">＋ Ask a doubt</button></div></div>`}`;
+  $$('.db-cin').forEach(ci => { const v = keepVals[ci.dataset.did]; if (v) ci.value = v; });
+  const inp = $('#db-search');
+  if (inp) inp.addEventListener('input', () => { dbFilter.q = inp.value; renderDoubts();
+    const el2 = $('#db-search'); if (el2){ el2.focus(); el2.setSelectionRange(el2.value.length, el2.value.length); } });
+  $$('.db-cin').forEach(ci => ci.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); dbSendMsg(ci.dataset.did); }
+  }));
+  const mf = $('#db-msgfile');
+  if (mf) mf.addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0]; mf.value = '';
+    if (!f || !dbPendingTarget) return;
+    if (f.size > 8 * 1024 * 1024) return toast('Photo too large (max 8MB)');
+    const r = new FileReader();
+    r.onload = async () => { dbPendingImg = { did: dbPendingTarget, img: await dbShrinkImg(String(r.result)) }; renderDoubts(); };
+    r.readAsDataURL(f);
+  });
+}
+function doubtModal(editId){
+  const it = editId ? (state.doubts||[]).find(x=>x.id===editId) : null;
+  if (!state.subjects.length && !it){ toast('Add a subject first'); return; }
+  state.people = state.people || [];
+  dbModalPeople = new Set((it && it.people) || []);
+  openModal(`
+    <h3>${it ? 'Edit doubt' : 'Ask a doubt'}</h3>
+    <div class="grid" style="gap:10px">
+      <label class="f">Your doubt<textarea id="m-dq" style="min-height:60px" placeholder="Type the question… (or just attach a photo of it below)">${it?esc(it.q):''}</textarea></label>
+      <div class="row wrap" style="gap:8px;align-items:center">
+        <button class="btn sm" data-act="db-pick-qimg">📷 Add photo of question</button>
+        <input id="m-dqimg" type="file" accept="image/*" style="display:none">
+        <img id="m-dqimg-prev" class="db-thumb" style="display:none" alt="question preview">
+        <button class="iconbtn" id="m-dqimg-x" style="display:none" title="Remove photo">✕</button>
+      </div>
+      <div class="grid g2">
+        <label class="f">Subject
+          <select id="m-dsubject">${state.subjects.map(s=>`<option value="${s.id}" ${it&&it.subjectId===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>
+      </div>
+      <div class="f">👥 Chat with (select people)
+        <div id="m-people-list" class="row wrap" style="gap:6px;margin-top:6px">${dbPeoplePickerHtml('db-modal-person')}</div>
+        ${dbAddPersonHtml('m-pname','m-prole','db-modal-addperson')}
+      </div>
+      <label class="f">Your answer (optional — type it, or attach a photo of your written solution)
+        <textarea id="m-down" style="min-height:80px" placeholder="Write your own step-by-step solution here">${it?esc(it.myAns||it.a||''):''}</textarea></label>
+      <div class="row wrap" style="gap:8px;align-items:center">
+        <button class="btn sm" data-act="db-pick-aimimg">📷 Add photo of your answer</button>
+        <input id="m-daimg" type="file" accept="image/*" style="display:none">
+        <img id="m-daimg-prev" class="db-thumb" style="display:none" alt="answer preview">
+        <button class="iconbtn" id="m-daimg-x" style="display:none" title="Remove photo">✕</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost" data-act="modal-close">Cancel</button>
+      <button class="btn primary" data-act="save-doubt" data-id="${editId||''}">${it ? 'Save' : 'Post to chat'}</button>
+    </div>`);
+  const wirePick = (btnAct, fileSel, prevSel, xSel) => {
+    const prev = $(prevSel), x = $(xSel);
+    $(fileSel).addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = () => { prev.src = r.result; prev.style.display = ''; x.style.display = ''; };
+      r.readAsDataURL(f);
+    });
+    x.addEventListener('click', () => { $(fileSel).value = ''; prev.removeAttribute('src'); prev.style.display = 'none'; x.style.display = 'none'; });
+  };
+  wirePick('db-pick-qimg', '#m-dqimg', '#m-dqimg-prev', '#m-dqimg-x');
+  wirePick('db-pick-aimimg', '#m-daimg', '#m-daimg-prev', '#m-daimg-x');
+  setTimeout(()=> $('#m-dq')?.focus(), 30);
+}
+
+/* ============================================================
+   AI STUDY COACH — offline rules-based advisor
+   Reads live state (exams, syllabus, sessions, cards) and answers
+   with concrete plans, goals and coaching. Can apply actions.
+   ============================================================ */
+function coachContext(){
+  const t = todayISO();
+  return {
+    t,
+    subjects: state.subjects.map(s => ({ ...s, days: daysUntil(s.examDate), pr: topicProgress(s) }))
+      .sort((a,b)=> (a.days ?? 999) - (b.days ?? 999)),
+    studied: studiedOn(t), planned: plannedOn(t), dueCards: cardsDueCount(), streak: streakDays(),
+  };
+}
+
+function coachReply(q){
+  const ctx = coachContext();
+  const lower = q.toLowerCase();
+  const nameList = ctx.subjects.map(s=>s.name);
+  const mentioned = ctx.subjects.find(s => lower.includes(s.name.toLowerCase()));
+
+  // --- intents ---
+  if (ctx.subjects.length === 0)
+    return "Let's start from scratch: head to **Subjects**, add each course with its exam date, and list the syllabus as topics. Then come back and ask me to *plan my week* — I'll do the scheduling.";
+
+  if (/\b(hi|hello|hey|help|what can you)\b/.test(lower))
+    return `I'm your study coach. Here's what I can do right now:\n• **Plan my day / week** — I'll schedule blocks around your exams\n• **What should I study?** — I'll pick the highest-priority topic\n• **Am I on track?** — honest readiness check per exam\n• **Set goals** — I'll propose today's goals\nYour nearest exam: **${ctx.subjects[0].name}** (${ctx.subjects[0].days}d).`;
+
+  if (/(plan|schedule|timetable|what.*today|my day|my week)/.test(lower)){
+    if (!ctx.planned){ const r = buildPlan(); return `Done — I've generated a full plan. ${r.note}\nCheck the **Study Plan** tab. Today's blocks are waiting on the dashboard. 🎯`; }
+    const left = ctx.subjects[0];
+    return `Today you have **${fmtMin(ctx.planned)}** planned (${state.tasks.filter(x=>x.date===ctx.t && !x.done).length} blocks left) and you've logged **${fmtMin(ctx.studied)}**.\nStart with the first uncompleted block on the dashboard. ${left.days<7 ? `${left.name} is in ${left.days} days — protect that time.` : 'Stay consistent and the plan does the work.'}\nWant a fresh schedule? Say **rebuild my plan**.`; }
+
+  if (/(rebuild|regenerate|new plan)/.test(lower)){
+    const r = buildPlan(); return `Rebuilt ✨ ${r.note}`; }
+
+  if (/(what should i study|what next|priority|first|focus on)/.test(lower)){
+    const s = mentioned || ctx.subjects[0];
+    const topic = nextTopic(s);
+    if (!topic) return `${s.name} is fully done 🎉 — everything is ticked off. Try mixed recall or past papers next.`;
+    return `Highest priority right now: **${s.name} → ${topic.name}** (difficulty ${DIFF_LABEL[topic.difficulty]}, ${s.days ?? '?'} days to exam).\nReasoning: exam is close, confidence is ${s.confidence}/5, and this is one of the hardest topics left.\nHit **▶ Start recommended session** on the dashboard and I'll pair the timer with it.`; }
+
+  if (/(on track|ready|how am i|progress|readiness)/.test(lower)){
+    const lines = ctx.subjects.map(s => {
+      const pace = s.days > 0 && s.pr.n > s.pr.d ? Math.ceil((s.pr.n - s.pr.d) / s.days) : 0;
+      const verdict = s.pr.pct >= 80 ? 'on track ✅' : s.pr.pct >= 50 ? 'close, but push ⚠️' : s.days <= 7 ? 'at risk 🔴' : 'needs momentum 🟡';
+      return `• **${s.name}** — ${s.pr.pct}% done, exam in ${s.days ?? '—'}d, confidence ${s.confidence}/5 → ${verdict}${pace ? ` (tick ~${pace} topic(s)/day)` : ''}`;
+    });
+    return `Readiness check:\n${lines.join('\n')}\n${ctx.dueCards ? `Also: **${ctx.dueCards} flashcards due** — recall first, always.` : 'Recall deck is clear — nice.'}`; }
+
+  if (/(goal|goals)/.test(lower)){
+    const gs = suggestGoals();
+    return `Here are today's goals — tap to add any of them:\n` + gs.map(g=>`▸ ${g}`).join('\n'); }
+
+  if (/(flashcard|recall|memoriz|memoris|revise|review)/.test(lower)){
+    const deckCount = state.decks.reduce((a,d)=>a+d.cards.length,0);
+    return ctx.dueCards
+      ? `You have **${ctx.dueCards} cards due** across your decks (${deckCount} total). Active recall is the highest-value 25 minutes you can spend — open **Flashcards** and clear them before new material.`
+      : deckCount ? `Recall deck is clear ✅. Next cards return over the coming days (spaced repetition). Meanwhile: teach a topic aloud from your notes, or re-attempt a solved doubt.`
+      : `No decks yet. Create a deck per subject in **Flashcards** and add 5–10 question cards per topic. Writing the question is itself revision.`; }
+
+  if (/(doubt|stuck|don.t understand|do not understand|confus|not getting|clarif)/.test(lower)){
+    return `Tell me the doubt as a question — open **Doubt Solver**, type it, and I'll break it into steps and save it for revision.`; }
+
+  if (/(pomodoro|timer|25|break)/.test(lower))
+    return `Pomodoro recipe: ${state.settings.focusMin}m focus / ${state.settings.breakMin}m break, long break after ${state.settings.cyclesBeforeLong} cycles. Pair each timer with a subject so your stats stay honest. Open **Focus Timer** and press ▶.`;
+
+  if (/(procrastin|lazy|motivat|tired|overwhelm|stress|anxious)/.test(lower)){
+    const s = ctx.subjects[0];
+    return `Overwhelm is usually an unbounded to-do list. Fix:\n1. Commit to **one ${state.settings.focusMin}m block** on **${s.name} → ${nextTopic(s)?.name || 'review'}** — nothing else.\n2. Phone in another room.\n3. After the block, take the ${state.settings.breakMin}m break guilt-free.\nMomentum beats motivation. Start the timer and I'll log it.`; }
+
+  if (/(exam|test) .*(tomorrow|today|next week)/.test(lower) || (mentioned && mentioned.days <= 2)){
+    const s = mentioned || ctx.subjects[0];
+    return `**${s.name}** is ${s.days===0?'TODAY':`tomorrow`} — switch modes:\n• No new topics. Review solved doubts + flashcards only.\n• Do one past paper section under time.\n• Sleep is a study technique: stop by ${state.settings.dailyTargetMin>240?'22:30':'23:00'}.\nYou've got ${s.pr.pct}% of the syllabus banked — trust it.`; }
+
+  // default: situational summary
+  const s = ctx.subjects[0];
+  return `Here's where you stand:\n• Nearest exam: **${s.name}** in ${s.days}d (${s.pr.pct}% syllabus done)\n• Today: ${fmtMin(ctx.studied)} studied / ${fmtMin(ctx.planned)} planned\n• ${ctx.dueCards} cards due · streak ${ctx.streak}d\n\nSay **plan my day**, **what should I study**, **am I on track**, or **set goals** — or mention a subject by name.`;
+}
+
+function suggestGoals(){
+  const ctx = coachContext(); const out = [];
+  if (ctx.dueCards) out.push(`Clear ${ctx.dueCards} due flashcards`);
+  const s = ctx.subjects[0];
+  if (s){ const topic = nextTopic(s); if (topic) out.push(`Study ${s.name}: ${topic.name}`); }
+  if (ctx.studied < state.settings.dailyTargetMin)
+    out.push(`Reach ${fmtMin(state.settings.dailyTargetMin)} total study time today`);
+  if (!state.decks.length) out.push('Create a flashcard deck for one subject');
+  if (out.length < 3) out.push('One 25m solved-doubt revision sprint');
+  return out.slice(0,4);
+}
+
+function renderCoach(){
+  const p = $('#panel-coach');
+  p.innerHTML = `
+    <div class="chat-wrap card">
+      <div class="row wrap" style="margin-bottom:8px">
+        <div class="grow"><h2 style="margin:0">🤖 AI Study Coach</h2>
+          <p class="sub" style="margin:2px 0 0">Knows your exams, syllabus, sessions and cards. Try a suggestion below — it can build plans, goals and solve doubts.</p></div>
+        <button class="btn sm ghost" data-act="clear-chat">Clear chat</button>
+      </div>
+      <div class="chat-log" id="chat-log">
+        ${state.chat.length ? state.chat.map(m => `
+          <div class="msg ${m.role}">${mdLite(m.text)}<div class="t">${m.t ? timeAgo(m.t) : ''}</div>
+            ${m.actions?.length ? `<div class="msg-actions">${m.actions.map((a,i)=>`
+              <button class="btn sm ${a.primary?'primary':''}" data-act="chat-action" data-mi="${state.chat.indexOf(m)}" data-ai="${i}">${a.label}</button>`).join('')}</div>`:''}
+          </div>`).join('')
+        : `<div class="msg coach">${mdLite(introMessage())}</div>`}
+      </div>
+      <div class="chiprow">
+        ${['Plan my day','What should I study?','Am I on track?','Set goals','Motivate me'].map(c=>
+          `<button class="chipbtn" data-act="chat-quick" data-q="${esc(c)}">${c}</button>`).join('')}
+      </div>
+      <div class="chat-input">
+        <input id="chat-input" placeholder="Ask your coach… (e.g. 'I have physics in 5 days and I'm panicking')">
+        <button class="btn primary" data-act="chat-send">Send</button>
+      </div>
+    </div>`;
+  const log = $('#chat-log'); log.scrollTop = log.scrollHeight;
+  const inp = $('#chat-input');
+  inp.focus();
+  inp.addEventListener('keydown', e => { if (e.key==='Enter'){ e.preventDefault(); sendChat(); } });
+}
+function introMessage(){
+  const ctx = coachContext();
+  if (!ctx.subjects.length) return "Hi! I'm your study coach 🤖\nStart by adding **subjects with exam dates** in the Subjects tab. Then ask me to *plan your day*, pick priorities, check if you're on track, or clear doubts.";
+  return `Hi! I'm your study coach 🤖\nI can see ${ctx.subjects.length} subject(s) — nearest exam: **${ctx.subjects[0].name}** in ${ctx.subjects[0].days}d.\nAsk me to plan your day, pick what to study, check your readiness, or set goals.`;
+}
+function mdLite(s){
+  return esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\*(.+?)\*/g,'<i>$1</i>').replace(/\n/g,'<br>');
+}
+function sendChat(preset){
+  const inp = $('#chat-input');
+  const text = (preset || (inp && inp.value) || '').trim();
+  if (!text) return;
+  state.chat.push({ role:'user', text, t:Date.now() });
+  const reply = coachReply(text);
+  const actions = [];
+  if (/rebuild|generate/i.test(reply)) actions.push({ label:'✨ Open Study Plan', view:'plan' });
+  if (/doubt/i.test(text)){ actions.push({ label:'🙋 Solve it', view:'doubts' }); }
+  const goals = suggestGoals();
+  if (text.toLowerCase().includes('goal')){
+    goals.forEach(g => actions.push({ label:`＋ ${g}`, run:'add-goal', arg:g }));
+  }
+  state.chat.push({ role:'coach', text:reply, t:Date.now(), actions });
+  save();
+  renderCoach();
+}
+function doubtFromCoach(subjectId){
+  const s = subjById(subjectId); if (!s) return;
+  setView('doubts');
+  doubtModal();
+  setTimeout(()=>{ const sel = $('#m-dsubject'); if (sel) sel.value = s.id; }, 40);
+}
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+/* ---------- exam dates editor (shortcut: E) ---------- */
+function openExamDatesModal(){
+  if (!state.subjects.length){
+    openModal(`<h3>🎓 Exam dates</h3>
+      <p class="sub">Add a subject first — then set its exam date here (or press <b>E</b> anytime).</p>
+      <div class="row" style="justify-content:flex-end;margin-top:14px">
+        <button class="btn ghost" data-act="modal-close">Close</button>
+        <button class="btn primary" data-act="add-subject-modal">＋ Add subject</button></div>`);
+    return;
+  }
+  const rows = [...state.subjects].sort((a,b)=>(daysUntil(a.examDate)??9999)-(daysUntil(b.examDate)??9999)).map(s => {
+    const d = daysUntil(s.examDate);
+    const note = !s.examDate ? '<span class="tag">not set</span>'
+      : d < 0 ? '<span class="tag" style="color:var(--muted)">past</span>'
+      : d <= 3 ? `<span class="tag" style="color:var(--red);font-weight:700">${d===0?'today':'in '+d+'d'}</span>`
+      : d <= 7 ? `<span class="tag" style="color:var(--amber)">in ${d}d</span>`
+      : `<span class="tag" style="color:var(--green)">in ${d}d</span>`;
+    return `<div class="item" style="margin-top:8px">
+      <span class="chip" style="background:${s.color}22;color:${s.color};min-width:90px;cursor:pointer" data-act="subject-detail" data-id="${s.id}" title="View all data for ${esc(s.name)}">${esc(s.name)}</span>
+      <input type="date" class="grow" style="width:auto" value="${s.examDate||''}" data-act="exam-date" data-sid="${s.id}">
+      ${note}
+      <button class="btn sm danger" data-act="remove-subject" data-id="${s.id}" title="Remove ${esc(s.name)} and everything linked to it (tasks, decks, doubts)">✕</button></div>`;
+  }).join('');
+  openModal(`<h3>🎓 Exam dates</h3>
+    <p class="sub">Change a date and it saves instantly — plans, countdowns and the coach update right away.<br>Tip: press <b>E</b> anywhere to open this.</p>
+    <div style="margin-top:8px">${rows}</div>
+    <div class="row" style="margin-top:16px;gap:8px">
+      <input id="m-xname" placeholder="Add another subject… (e.g. Chemistry)" style="flex:1.4">
+      <input type="date" id="m-xdate" style="width:150px;flex:none">
+      <button class="btn primary" data-act="quick-add-subject" style="flex:none">＋ Add</button>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:12px">
+      <button class="btn ghost sm" data-act="add-subject-modal">Full editor (topics, weight, confidence)…</button>
+      <button class="btn primary" data-act="modal-close">Done</button>
+    </div>`);
+  setTimeout(()=>{
+    const n = $('#m-xname');
+    n?.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter'){ ev.preventDefault(); document.querySelector('[data-act=quick-add-subject]')?.click(); }
+    });
+    n?.focus();
+  }, 30);
+}
+
+function topicModal(subjectId){
+  const s = subjById(subjectId); if (!s) return;
+  openModal(`
+    <h3>+ Topic — ${esc(s.name)}</h3>
+    <div class="grid" style="gap:10px">
+      <label class="f">Topic name<input id="m-tname" placeholder="e.g. Circular motion"></label>
+      <label class="f">Difficulty
+        <select id="m-tdiff">
+          <option value="1">Easy</option>
+          <option value="2" selected>Medium</option>
+          <option value="3">Hard</option>
+        </select></label>
+    </div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost" data-act="modal-close">Cancel</button>
+      <button class="btn primary" data-act="save-topic" data-sid="${subjectId}">Add topic</button>
+    </div>`);
+  setTimeout(()=> $('#m-tname')?.focus(), 30);
+}
+
+function subjectModal(editId){
+  const s = editId ? subjById(editId) : null;
+  openModal(`
+    <h3>${s?'Edit subject':'New subject'}</h3>
+    <div class="grid" style="gap:10px">
+      <label class="f">Name<input id="m-name" value="${s?esc(s.name):''}" placeholder="e.g. Physics"></label>
+      <div class="grid g2">
+        <label class="f">Exam date<input type="date" id="m-date" value="${s?.examDate||''}"></label>
+        <label class="f">Color<select id="m-color">${SUBJECT_COLORS.map(c=>`<option value="${c}" ${s?.color===c?'selected':''}>${c}</option>`).join('')}</select></label>
+      </div>
+      <div class="grid g2">
+        <label class="f">Exam weight (1–3)<input type="number" id="m-weight" min="1" max="3" value="${s?.weight||2}"></label>
+        <label class="f">Confidence (1–5)<input type="number" id="m-conf" min="1" max="5" value="${s?.confidence||3}"></label>
+      </div>
+      <label class="f">Syllabus topics (one per line)
+        <textarea id="m-topics" placeholder="Kinematics\nNewton's laws\n…">${s ? s.topics.map(t=>t.name).join('\n') : ''}</textarea></label>
+    </div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost" data-act="modal-close">Cancel</button>
+      <button class="btn primary" data-act="save-subject" data-id="${editId||''}">${s?'Save':'Add subject'}</button>
+    </div>`);
+  setTimeout(()=> $('#m-name')?.focus(), 30);
+}
+function subjectDetailModal(id){
+  const s = subjById(id); if (!s) return;
+  const pr = topicProgress(s);
+  const d = daysUntil(s.examDate);
+  const urg = !s.examDate ? 'var(--muted)' : d<=3 ? 'var(--red)' : d<=7 ? 'var(--amber)' : 'var(--green)';
+  const examTxt = !s.examDate ? 'no exam date' : d<0 ? `past · ${fmtDayShort(s.examDate)}` : d===0 ? 'TODAY' : `in ${d}d · ${fmtDayShort(s.examDate)}`;
+  const pace = (s.examDate && d>=0 && pr.n>pr.d) ? `⚡ ~${Math.max(1, Math.ceil((pr.n-pr.d) * Math.max(s.weight,1) * 0.75 / Math.max(d,1)))} topic(s)/day needed` : '';
+  const tasks = state.tasks.filter(t=>t.subjectId===id);
+  const openTasks = tasks.filter(t=>!t.done).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6);
+  const sessions = state.sessions.filter(x=>x.subjectId===id);
+  const totalMin = sessions.reduce((a,x)=>a+x.minutes,0);
+  const weekMin = sessions.filter(x=>new Date(x.at).getTime() >= Date.now()-7*864e5).reduce((a,x)=>a+x.minutes,0);
+  const decks = state.decks.filter(dk=>dk.subjectId===id);
+  const cards = decks.reduce((a,dk)=>a+dk.cards.length,0);
+  const now = Date.now();
+  const due = decks.reduce((a,dk)=>a+dk.cards.filter(c=>new Date(c.due).getTime()<=now).length,0);
+  const boxes = [1,2,3,4,5].map(b => decks.reduce((a,dk)=>a+dk.cards.filter(c=>c.box===b).length,0));
+  const doubts = (state.doubts||[]).filter(x=>x.subjectId===id);
+  const dbSolved = doubts.filter(x=>x.solved).length;
+  openModal(`
+    <h3 style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span class="chip" style="background:${s.color}22;color:${s.color};font-size:15px;padding:6px 14px">${esc(s.name)}</span>
+      <span class="pill" style="border-color:${urg}55;color:${urg}">🎓 ${examTxt}</span>
+    </h3>
+    <div class="row wrap" style="margin-top:10px;gap:6px">
+      <span class="tag">weight ${s.weight}/3</span>
+      <span class="tag">confidence ${'●'.repeat(s.confidence)}${'○'.repeat(5-s.confidence)}</span>
+      ${(() => { const libN = (state.library||[]).filter(x=>x.subjectId===id).length;
+        return libN ? `<button class="btn sm ghost" data-act="lib-open" style="padding:2px 10px">🗂️ ${libN} in library</button>` : ''; })()}
+      ${pace ? `<span class="tag" style="color:var(--amber)">${pace}</span>` : ''}
+    </div>
+    <div class="grid g4" style="margin-top:14px">
+      <div class="stat"><div class="k">Syllabus</div><div class="v">${pr.pct}%</div><div class="s">${pr.d} of ${pr.n} topics done</div></div>
+      <div class="stat"><div class="k">Study time</div><div class="v">${totalMin ? fmtMin(totalMin) : '—'}</div><div class="s">${fmtMin(weekMin)} in last 7 days</div></div>
+      <div class="stat"><div class="k">Flashcards</div><div class="v">${cards||'—'}</div><div class="s">${due} due now · ${decks.length} deck${decks.length===1?'':'s'}</div></div>
+      <div class="stat"><div class="k">Doubts</div><div class="v">${doubts.length||'—'}</div><div class="s">${dbSolved} solved</div></div>
+    </div>
+    ${cards ? `<div class="row wrap" style="margin-top:10px;gap:6px">${boxes.map((n,i)=>`<span class="tag" title="Leitner box ${i+1}">Box ${i+1} · ${n}</span>`).join('')}</div>` : ''}
+    <div style="margin-top:14px">
+      <div class="k" style="color:var(--muted);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Topics</div>
+      <div class="list" style="margin-top:6px;max-height:150px;overflow:auto">
+        ${s.topics.length ? [...s.topics].sort((a,b)=>a.done-b.done||b.difficulty-a.difficulty).map(t=>`
+          <div class="item ${t.done?'done':''}"><span>${t.done?'✅':'◻️'}</span>
+            <div class="grow"><div class="title">${esc(t.name)}</div></div>
+            <span class="tag">${DIFF_LABEL[t.difficulty]}</span></div>`).join('')
+        : '<p class="sub">No topics yet — open ✎ Edit to add the syllabus.</p>'}
+      </div>
+    </div>
+    <div class="grid g3" style="margin-top:12px">
+      <div>
+        <div class="k" style="color:var(--muted);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Open tasks</div>
+        ${openTasks.length ? openTasks.map(t=>`
+          <div class="item"><span>📅</span><div class="grow"><div class="title">${esc(t.title)}</div></div>
+            <span class="tag">${fmtDayShort(t.date)}</span><span class="tag">${fmtMin(t.minutes)}</span></div>`).join('')
+        : '<p class="sub" style="margin-top:6px">None — everything done 🎉</p>'}
+      </div>
+      <div>
+        <div class="k" style="color:var(--muted);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Recent sessions</div>
+        ${sessions.length ? sessions.slice(-4).reverse().map(x=>`
+          <div class="item"><span>⏱️</span><div class="grow"><div class="title">${fmtDayShort(todayISO(new Date(x.at)))}</div></div>
+            <span class="tag">${fmtMin(x.minutes)}</span></div>`).join('')
+        : '<p class="sub" style="margin-top:6px">No sessions logged yet.</p>'}
+      </div>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:16px;gap:8px">
+      <button class="btn ghost" data-act="modal-close">Close</button>
+      <button class="btn ghost" data-act="edit-subject" data-id="${s.id}">✎ Edit</button>
+      ${due ? `<button class="btn" data-act="detail-study-cards" data-id="${s.id}">🧠 ${due} cards due</button>` : ''}
+      <button class="btn primary" data-act="detail-start-focus" data-id="${s.id}">▶ Focus on ${esc(s.name)}</button>
+    </div>`);
+}
+
+function addTaskModal(){
+  if (!state.subjects.length){ toast('Add a subject first'); return; }
+  openModal(`
+    <h3>New study task</h3>
+    <div class="grid" style="gap:10px">
+      <label class="f">Title<input id="m-title" placeholder="e.g. Past paper — Section B"></label>
+      <div class="grid g2">
+        <label class="f">Subject<select id="m-subject">${state.subjects.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+        <label class="f">Date<input type="date" id="m-date" value="${todayISO()}"></label>
+      </div>
+      <label class="f">Minutes<input type="number" id="m-minutes" min="5" step="5" value="${state.settings.focusMin}"></label>
+    </div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost" data-act="modal-close">Cancel</button>
+      <button class="btn primary" data-act="save-task">Add task</button>
+    </div>`);
+  setTimeout(()=> $('#m-title')?.focus(), 30);
+}
+function deckModal(){
+  if (!state.subjects.length){ toast('Add a subject first'); return; }
+  openModal(`
+    <h3>New flashcard deck</h3>
+    <div class="grid" style="gap:10px">
+      <label class="f">Deck name<input id="m-dname" placeholder="e.g. Physics — definitions"></label>
+      <label class="f">Subject<select id="m-dsubject">${state.subjects.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+    </div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost" data-act="modal-close">Cancel</button>
+      <button class="btn primary" data-act="save-deck">Create deck</button>
+    </div>`);
+  setTimeout(()=> $('#m-dname')?.focus(), 30);
+}
+function cardModal(deckId){
+  const decks = state.decks;
+  if (!decks.length){ toast('Create a deck first'); return; }
+  openModal(`
+    <h3>New flashcard</h3>
+    <div class="grid" style="gap:10px">
+      <label class="f">Deck<select id="m-cdeck">${decks.map(d=>`<option value="${d.id}" ${d.id===deckId?'selected':''}>${esc(d.name)}</option>`).join('')}</select></label>
+      <label class="f">Front (question / prompt)<textarea id="m-cfront" placeholder="What does the area under a v-t graph give?"></textarea></label>
+      <label class="f">Back (answer)<textarea id="m-cback" placeholder="Displacement"></textarea></label>
+    </div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost" data-act="modal-close">Cancel</button>
+      <button class="btn primary" data-act="save-card">Add card</button>
+    </div>`);
+  setTimeout(()=> $('#m-cfront')?.focus(), 30);
+}
+
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (!el) return;
+  const act = el.dataset.act;
+  const id = el.dataset.id;
+  switch(act){
+    // tasks
+    case 'toggle-task': { const t = state.tasks.find(x=>x.id===id); if (t){ t.done = !t.done; save(); render(); } break; }
+    case 'del-task': state.tasks = state.tasks.filter(x=>x.id!==id); save(); render(); break;
+    case 'add-task-modal': addTaskModal(); break;
+    case 'save-task': {
+      const title = $('#m-title').value.trim(); if (!title){ toast('Give it a title'); return; }
+      state.tasks.push({ id:uid(), subjectId:$('#m-subject').value, title, date:$('#m-date').value||todayISO(),
+        minutes:+$('#m-minutes').value||25, done:false, source:'manual' });
+      save(); closeModal(); render(); toast('Task added ✓'); break; }
+    case 'regen-today': case 'gen-plan': { const r = buildPlan(); toast(r.note); render(); break; }
+    case 'clear-day': {
+      const d = el.dataset.date;
+      state.tasks = state.tasks.filter(x => !(x.date===d && !x.done)); save(); render(); break; }
+    case 'pomo-with-task': {
+      const task = state.tasks.find(x=>x.id===id); if (!task) break;
+      state.pomo.subjectId = task.subjectId; state.pomo.taskId = task.id;
+      state.pomo.mode='focus'; state.pomo.remainingMs = pomoDuration('focus'); state.pomo.endsAt=null;
+      setView('pomodoro'); pomoStart(); break; }
+    case 'start-recommended': {
+      if (!state.subjects.length){ setView('subjects'); break; }
+      if (cardsDueCount()){ const first = dueCountBySubject()[0]; if (first){ startStudy(first.deck.id, true); toast('Clearing recall backlog first 🧠'); break; } }
+      const ctx = coachContext(); const s = ctx.subjects[0]; const topic = nextTopic(s);
+      if (!topic){ setView('flashcards'); break; }
+      state.tasks.push({ id:uid(), subjectId:s.id, title:`Study: ${topic.name}`, date:todayISO(), minutes:state.settings.focusMin, done:false, source:'manual', topicId:topic.id });
+      save();
+      const task = state.tasks[state.tasks.length-1];
+      state.pomo.subjectId = s.id; state.pomo.taskId = task.id;
+      state.pomo.mode='focus'; state.pomo.remainingMs = pomoDuration('focus'); state.pomo.endsAt=null;
+      setView('pomodoro'); pomoStart(); break; }
+    // subjects & topics
+    case 'add-subject-modal': subjectModal(); break;
+    case 'edit-exams': openExamDatesModal(); break;
+    case 'quick-add-subject': {
+      const name = $('#m-xname')?.value.trim();
+      if (!name){ toast('Give the subject a name'); $('#m-xname')?.focus(); break; }
+      const color = SUBJECT_COLORS.find(c => !state.subjects.some(s => s.color === c)) || SUBJECT_COLORS[0];
+      state.subjects.push({ id:uid(), name, color, examDate: $('#m-xdate')?.value || null, confidence:3, weight:2, topics:[] });
+      save(); render();
+      toast(`Added ${name} — add its topics so the planner can schedule it`);
+      openExamDatesModal(); // refresh rows, stay in the editor
+      break; }
+    case 'remove-subject': {
+      const s = subjById(id); if (!s) break;
+      if (!confirm(`Remove "${s.name}" and everything linked to it (tasks, decks, doubts)?`)) break;
+      state.subjects = state.subjects.filter(x=>x.id!==id);
+      state.tasks = state.tasks.filter(t=>t.subjectId!==id);
+      state.decks = state.decks.filter(d=>d.subjectId!==id);
+      state.doubts = (state.doubts||[]).filter(x=>x.subjectId!==id);
+      save(); render();
+      toast(`Removed ${s.name} ✓`);
+      openExamDatesModal(); // rebuild rows, stay in the editor
+      break; }
+    case 'subject-detail': subjectDetailModal(id); break;
+    case 'detail-start-focus': {
+      const s = subjById(id); if (!s) break;
+      const topic = nextTopic(s);
+      if (topic){
+        state.tasks.push({ id:uid(), subjectId:s.id, title:`Study: ${topic.name}`, date:todayISO(), minutes:state.settings.focusMin, done:false, source:'manual', topicId:topic.id });
+        save();
+        state.pomo.taskId = state.tasks[state.tasks.length-1].id;
+      } else state.pomo.taskId = null;
+      state.pomo.subjectId = s.id; state.pomo.mode='focus';
+      state.pomo.remainingMs = pomoDuration('focus'); state.pomo.endsAt = null;
+      closeModal(); setView('pomodoro'); pomoStart(); break; }
+    case 'detail-study-cards': {
+      const nowTs = Date.now();
+      const dk = state.decks.filter(x=>x.subjectId===id)
+        .map(x=>({ x, n: x.cards.filter(c=>new Date(c.due).getTime()<=nowTs).length }))
+        .sort((a,b)=>b.n-a.n)[0];
+      if (dk && dk.n){ closeModal(); startStudy(dk.x.id, true); }
+      else toast('No cards due for this subject');
+      break; }
+    case 'edit-subject': subjectModal(id); break;
+    case 'save-subject': {
+      const name = $('#m-name').value.trim(); if (!name){ toast('Name required'); return; }
+      const topics = $('#m-topics').value.split('\n').map(x=>x.trim()).filter(Boolean)
+        .map(n => ({ id:uid(), name:n, done:false, difficulty:2 }));
+      const base = { name, examDate:$('#m-date').value||null, color:$('#m-color').value,
+        weight:clamp(+$('#m-weight').value||2,1,3), confidence:clamp(+$('#m-conf').value||3,1,5) };
+      if (el.dataset.id){
+        const s = subjById(el.dataset.id);
+        Object.assign(s, base);
+        const existing = new Set(s.topics.map(t=>t.name));
+        topics.forEach(t => { if (!existing.has(t.name)) s.topics.push(t); });
+      } else {
+        state.subjects.push({ id:uid(), topics, ...base });
+      }
+      save(); closeModal(); render(); toast('Subject saved ✓'); break; }
+    case 'del-subject': {
+      state.subjects = state.subjects.filter(s=>s.id!==id);
+      state.tasks = state.tasks.filter(t=>t.subjectId!==id);
+      state.decks = state.decks.filter(d=>d.subjectId!==id);
+      state.doubts = (state.doubts||[]).filter(x=>x.subjectId!==id);
+      save(); render(); break; }
+    case 'add-topic': topicModal(id); break;
+    case 'save-topic': {
+      const s = subjById(el.dataset.sid); if (!s) break;
+      const name = $('#m-tname')?.value.trim(); if (!name){ toast('Give the topic a name'); $('#m-tname')?.focus(); break; }
+      s.topics.push({ id:uid(), name, done:false, difficulty:+$('#m-tdiff')?.value || 2 });
+      save(); closeModal(); render(); toast('Topic added ✓'); break; }
+    case 'toggle-topic': {
+      const s = subjById(el.dataset.sid); const t = s?.topics.find(x=>x.id===el.dataset.id);
+      if (t){ t.done = !t.done; save(); render(); } break; }
+    case 'del-topic': {
+      const s = subjById(el.dataset.sid); s.topics = s.topics.filter(x=>x.id!==el.dataset.id); save(); render(); break; }
+    case 'load-demo': loadDemo(); render(); toast('Demo data loaded — explore, then clear and add your own'); break;
+    // library
+    case 'add-library': libraryModal(); break;
+    case 'edit-library': libraryModal(id); break;
+    case 'save-library': {
+      const title = $('#m-ltitle').value.trim(); if (!title){ toast('Give it a title'); return; }
+      const rec = { kind:$('#m-lkind').value, subjectId:$('#m-lsubject')?.value || null,
+        title, meta:$('#m-lmeta').value.trim(), body:$('#m-lbody').value, updated:Date.now(),
+        attachments: libAttDraft.slice() };
+      if (el.dataset.id){ const it = (state.library||[]).find(x=>x.id===el.dataset.id); if (it) Object.assign(it, rec); }
+      else { state.library = state.library || []; state.library.push({ id:uid(), ...rec }); }
+      libAttDraft = [];
+      save(); closeModal(); render(); toast('Saved to library ✓'); break; }
+    case 'pwa-install': pwaInstall(); break;
+    case 'notify-today': {
+      if (window.Notification && Notification.permission === 'default') Notification.requestPermission().then(()=>notifyTasksToday());
+      else notifyTasksToday();
+      break; }
+    case 'next-motiv': nextMotiv(); break;
+    // backup & restore — keep a second copy of everything so data can never be lost
+    case 'backup-download': {
+      try {
+        const blob = new Blob([JSON.stringify({ app:'studybuddy', user: user ? user.email : 'guest', at: Date.now(), data: state })], {type:'application/json'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `studybuddy-backup-${todayISO()}.json`; document.body.appendChild(a); a.click(); a.remove();
+        toast('Backup downloaded ✓');
+      } catch(err){ toast('Backup failed'); }
+      break; }
+    case 'backup-restore': {
+      const inp = document.createElement('input'); inp.type='file'; inp.accept='.json,application/json';
+      inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return;
+        const r = new FileReader();
+        r.onload = () => { try {
+          const j = JSON.parse(String(r.result)); const nd = j && j.data ? j.data : j;
+          if (!nd || typeof nd !== 'object' || !('subjects' in nd)){ toast('That is not a ..STUDY BUDDYYY.. backup file'); return; }
+          if (!confirm('Replace current data with this backup?')) return;
+          state = Object.assign(defaultState(), nd); save(); render(); toast('Backup restored ✓');
+        } catch(err){ toast('Could not read that backup'); } };
+        r.readAsText(f); };
+      inp.click(); break; }
+    case 'pdf-library': libExportPdf(id); break;
+    case 'share-library': libShare(id); break;
+    case 'del-library': {
+      if (!confirm('Delete this item from the library?')) break;
+      state.library = (state.library||[]).filter(x=>x.id!==id); save(); render(); toast('Deleted'); break; }
+    case 'copy-library': {
+      const it = (state.library||[]).find(x=>x.id===id); if (!it) break;
+      const txt = `${it.title}\n\n${it.body||''}`;
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(()=>toast('Copied ✓'), ()=>toast('Copy failed'));
+      else toast('Copy not supported here');
+      break; }
+    case 'lib-kind': libFilter.kind = el.dataset.kind; renderLibrary(); break;
+    case 'lib-subject': libFilter.subject = el.dataset.sid; renderLibrary(); break;
+    case 'lib-open': closeModal(); setView('library'); break;
+    case 'lib-att-pick': {
+      const inp = $('#m-lattfile'); if (!inp) break;
+      inp.accept = el.dataset.kind === 'pdf' ? '.pdf,application/pdf' : 'image/*';
+      inp.click(); break; }
+    case 'lib-att-view': libViewAtt(id); break;
+    case 'lib-att-del': {
+      libAttDraft = libAttDraft.filter(a => a.id !== id);
+      libRenderAtts(); break; }
+    // auth
+    case 'logout': doLogout(); break;
+    case 'auth-submit': authSubmit(); break;
+    case 'auth-guest': authGuest(); break;
+    case 'auth-google-setup': { const p = $('#a-gsetup'); if (p) p.style.display = p.style.display==='none' ? 'block' : 'none'; break; }
+    case 'auth-google-save': {
+      const gid = ($('#a-gid')?.value||'').trim();
+      if (!gid.includes('.apps.googleusercontent.com')){ authErr('That doesn\'t look like a Google Client ID (should end in apps.googleusercontent.com)'); break; }
+      try { localStorage.setItem(GOOGLE_ID_KEY, gid); } catch(e){}
+      toast('Client ID saved — activating Google sign-in');
+      initGoogleAuth(); break; }
+    case 'auth-google-remove': {
+      try { localStorage.removeItem(GOOGLE_ID_KEY); } catch(e){}
+      const box = $('#g-btn'); if (box) box.innerHTML = '';
+      initGoogleAuth(); toast('Google sign-in ID removed'); break; }
+    // pomodoro
+    case 'pomo-start': pomoStart(); break;
+    case 'pomo-pause': pomoPause(); break;
+    case 'pomo-reset': pomoReset(); break;
+    case 'pomo-skip': pomoSetMode(state.pomo.mode==='focus' ? 'break' : 'focus'); break;
+    case 'pomo-mode': pomoSetMode(el.dataset.mode); break;
+    // flashcards
+    case 'add-deck-modal': deckModal(); break;
+    case 'save-deck': {
+      const name = $('#m-dname').value.trim(); if (!name){ toast('Name required'); return; }
+      state.decks.push({ id:uid(), subjectId:$('#m-dsubject').value, name, cards:[] });
+      save(); closeModal(); render(); break; }
+    case 'del-deck': state.decks = state.decks.filter(d=>d.id!==id); save(); render(); break;
+    case 'add-card-modal': cardModal(id); break;
+    case 'save-card': {
+      const front = $('#m-cfront').value.trim(), back = $('#m-cback').value.trim();
+      if (!front || !back){ toast('Both sides required'); return; }
+      const deck = state.decks.find(d=>d.id===$('#m-cdeck').value);
+      deck.cards.push({ id:uid(), front, back, box:1, due:new Date().toISOString() });
+      save(); closeModal(); render(); toast('Card added ✓'); break; }
+    case 'del-card': {
+      const d = state.decks.find(x=>x.id===el.dataset.did);
+      d.cards = d.cards.filter(c=>c.id!==el.dataset.cid); save(); render(); break; }
+    case 'study-deck': startStudy(id, true); break;
+    case 'flip-card': flipCard(); break;
+    case 'rate-card': rateCard(+el.dataset.r); break;
+    case 'end-study': study = null; render(); break;
+    // goals
+    case 'toggle-goal': { const g = state.goals.find(x=>x.id===id); if (g){ g.done = !g.done; save(); render(); } break; }
+    case 'del-goal': state.goals = state.goals.filter(x=>x.id!==id); save(); render(); break;
+    // doubts
+    case 'add-doubt-modal': doubtModal(); break;
+    case 'edit-doubt': doubtModal(id); break;
+    case 'save-doubt': {
+      const q = ($('#m-dq')?.value || '').trim();
+      const own = ($('#m-down')?.value || '').trim();
+      const qImg = ($('#m-dqimg-prev')?.src || '');
+      const aImg = ($('#m-daimg-prev')?.src || '');
+      if (!q && !qImg && !own && !aImg){ toast('Type your doubt or add a photo'); $('#m-dq')?.focus(); break; }
+      const sid = $('#m-dsubject')?.value || null;
+      const people = [...dbModalPeople];
+      const existing = el.dataset.id ? (state.doubts||[]).find(x=>x.id===el.dataset.id) : null;
+      const isStudent = !!(own || aImg);
+      const rec = (existing && isStudent)
+        ? { subjectId:sid, q:q || existing.q, myAns:own, myAnsImg:aImg, solved:true }
+        : (existing
+          ? { subjectId:sid, q, qImg:qImg||null, myAns:own, myAnsImg:aImg }
+          : (isStudent
+            ? { subjectId:sid, q:q || 'My own doubt', qImg:qImg||null, myAns:own, myAnsImg:aImg, a:'', tags:[], solved:true, people:people.slice() }
+            : { subjectId:sid, q, qImg:qImg||null, a:'', tags:extractTags(q), solved:false, people:people.slice() }));
+      if (existing){
+        if (q) existing.q = q;
+        if (sid) existing.subjectId = sid;
+        existing.people = people.slice();
+        if (qImg || !existing.qImg) existing.qImg = qImg || null;
+        if (isStudent){ existing.myAns = own; existing.myAnsImg = aImg || null; existing.solved = true; }
+        else { if (own || aImg){ existing.myAns = own; existing.myAnsImg = aImg || null; } }
+      } else {
+        rec.created = Date.now();
+        state.doubts = state.doubts || [];
+        state.doubts.unshift({ id:uid(), ...rec });
+      }
+      save(); closeModal(); render();
+      toast(isStudent ? 'Your answer saved ✓' : 'Posted to the class chat ✓');
+      break; }
+    case 'db-pick-qimg': $('#m-dqimg').click(); break;
+    case 'db-pick-aimimg': $('#m-daimg').click(); break;
+    case 'db-img': { const src = el.getAttribute('src');
+      openModal(`<img src="${src}" style="max-width:100%;max-height:72vh;border-radius:12px" alt="doubt image">`, {wide:true});
+      break; }
+    case 'db-answer-modal': {
+      const d = (state.doubts||[]).find(x=>x.id===id); if (!d) break;
+      doubtModal(id); break; }
+    case 'db-send': dbSendMsg(id); break;
+    case 'db-tab': dbTab = el.dataset.tab; renderDoubts(); break;
+    case 'db-group-modal':
+      dbModalPeople = new Set();
+      openModal(`<h3>👥 New group</h3>
+        <div class="grid" style="gap:10px">
+          <label class="f">Group name<input id="m-gname" placeholder="e.g. Physics doubts — Class 12"></label>
+          <div class="f">👥 Members (pick from contacts or add)
+            <div id="mp-list" class="row wrap" style="gap:6px;margin-top:6px">${dbPeoplePickerHtml('db-people-tog')}</div>
+            <div class="row" style="margin-top:8px"><button class="btn sm" data-act="db-contacts">📱 Pick from phone contacts</button></div>
+            ${dbAddPersonHtml('mp-name','mp-role','db-people-add')}
+          </div>
+        </div>
+        <div class="row" style="margin-top:14px;justify-content:flex-end">
+          <button class="btn ghost" data-act="modal-close">Cancel</button>
+          <button class="btn primary" data-act="db-group-create">Create group</button>
+        </div>`);
+      setTimeout(()=> $('#m-gname')?.focus(), 30);
+      break;
+    case 'db-group-create': {
+      const name = ($('#m-gname')?.value || '').trim();
+      if (!name){ toast('Give the group a name'); $('#m-gname')?.focus(); break; }
+      state.groups = state.groups || [];
+      state.groups.unshift({ id:uid(), name, people:[...dbModalPeople], notes:[], created:Date.now() });
+      dbModalPeople = new Set(); save(); closeModal();
+      dbTab = 'groups'; renderDoubts(); toast('Group created 👥');
+      break; }
+    case 'db-del-group': {
+      if (!confirm('Delete this group and its chat?')) break;
+      state.groups = (state.groups||[]).filter(x=>x.id!==id); save(); renderDoubts(); toast('Group deleted'); break; }
+    case 'db-join-community': {
+      state.community = state.community || { joined:false, msgs:[], reacts:{} };
+      state.community.joined = true; save(); renderDoubts(); toast('Welcome to the community! 🌐'); break; }
+    case 'db-contacts': dbPickContacts(); break;
+    case 'db-pick-msg': {
+      dbPendingTarget = id;
+      const mf = $('#db-msgfile'); if (!mf) break;
+      if (el.dataset.mode === 'cam') mf.setAttribute('capture','environment'); else mf.removeAttribute('capture');
+      mf.click(); break; }
+    case 'db-pend-x': if (dbPendingImg && dbPendingImg.did===id) dbPendingImg = null; renderDoubts(); break;
+    case 'db-emoji-open': dbEmojiOpen = dbEmojiOpen===id ? null : id; dbReactOpen = null; renderDoubts(); break;
+    case 'db-emoji-pick': {
+      const did = dbEmojiOpen; if (!did) break;
+      dbEmojiOpen = null;
+      const box = document.querySelector(`.db-cin[data-did="${did}"]`);
+      if (box){ box.value += el.dataset.emoji; }
+      renderDoubts();
+      const nb = document.querySelector(`.db-cin[data-did="${did}"]`); if (nb) nb.focus();
+      break; }
+    case 'db-react-open': dbReactOpen = dbReactOpen===el.dataset.mid ? null : el.dataset.mid; dbEmojiOpen = null; renderDoubts(); break;
+    case 'db-react': {
+      const d = dbFind(id); if (!d) break;
+      const me = (user && user.name) || 'You';
+      d.reacts = d.reacts || {};
+      const r = d.reacts[el.dataset.mid] = d.reacts[el.dataset.mid] || {};
+      const arr = r[el.dataset.emoji] = r[el.dataset.emoji] || [];
+      const i = arr.indexOf(me);
+      if (i >= 0) arr.splice(i,1); else arr.push(me);
+      if (!arr.length) delete r[el.dataset.emoji];
+      if (!Object.keys(r).length) delete d.reacts[el.dataset.mid];
+      save(); renderDoubts(); break; }
+    case 'db-persona': {
+      const d = dbFind(id);
+      const chain = ['me','teacher'].concat(((d && d.people) || []));
+      const i = chain.indexOf(dbPersona);
+      dbPersona = chain[(i + 1) % chain.length] || 'me';
+      const pNow = (state.people||[]).find(x=>x.id===dbPersona);
+      toast(pNow ? `Now sending as ${pNow.name}` : (dbPersona==='teacher' ? '👩‍🏫 Now sending as Teacher' : '🧑‍🎓 Now sending as you'));
+      renderDoubts(); break; }
+    case 'db-poll-modal': {
+      const d = dbFind(id); if (!d) break;
+      openModal(`<h3>📊 Create a poll</h3>
+        <div class="grid" style="gap:10px">
+          <label class="f">Question<input id="m-poll-q" placeholder="e.g. Which topic should we revise first?"></label>
+          <label class="f">Option 1<input id="m-poll-o1" placeholder="Option 1"></label>
+          <label class="f">Option 2<input id="m-poll-o2" placeholder="Option 2"></label>
+          <label class="f">Option 3 (optional)<input id="m-poll-o3"></label>
+          <label class="f">Option 4 (optional)<input id="m-poll-o4"></label>
+        </div>
+        <div class="row" style="margin-top:14px;justify-content:flex-end">
+          <button class="btn ghost" data-act="modal-close">Cancel</button>
+          <button class="btn primary" data-act="db-poll-create" data-id="${id}">Post poll</button>
+        </div>`);
+      setTimeout(()=> $('#m-poll-q')?.focus(), 30);
+      break; }
+    case 'db-poll-create': {
+      const d = dbFind(id); if (!d) break;
+      const pq = ($('#m-poll-q')?.value || '').trim();
+      const opts = [1,2,3,4].map(i => ($('#m-poll-o'+i)?.value || '').trim()).filter(Boolean);
+      if (!pq || opts.length < 2){ toast('Poll needs a question and at least 2 options'); break; }
+      dbAddMsg(d, { id:uid(), name:dbMeName(), role:dbPersona, at:Date.now(), poll:{ q:pq, options: opts.map(t=>({text:t, votes:[]})) } });
+      closeModal(); toast('Poll posted 📊'); break; }
+    case 'db-poll-vote': {
+      const d = dbFind(id); if (!d) break;
+      const n = (d.notes||[]).find(x=>x.id===el.dataset.mid); if (!n || !n.poll) break;
+      const me = (user && user.name) || 'You';
+      const o = n.poll.options[+el.dataset.oi]; if (!o) break;
+      const voted = (o.votes||[]).includes(me);
+      n.poll.options.forEach(op => { op.votes = (op.votes||[]).filter(v => v !== me); });
+      if (!voted) (o.votes = o.votes||[]).push(me);
+      save(); renderDoubts(); break; }
+    case 'db-people-modal': dbPeopleModal(id); break;
+    case 'db-people-tog': {
+      const pid = el.dataset.pid;
+      if (dbModalPeople.has(pid)) dbModalPeople.delete(pid); else dbModalPeople.add(pid);
+      const list = $('#mp-list'); if (list) list.innerHTML = dbPeoplePickerHtml('db-people-tog');
+      break; }
+    case 'db-people-add': {
+      const name = ($('#mp-name')?.value || '').trim(); if (!name){ toast('Enter a name'); break; }
+      const p = { id:uid(), name, role: $('#mp-role')?.value || 'student' };
+      state.people = state.people || []; state.people.push(p); dbModalPeople.add(p.id); save();
+      const list = $('#mp-list'); if (list) list.innerHTML = dbPeoplePickerHtml('db-people-tog');
+      const nm = $('#mp-name'); if (nm) nm.value = '';
+      break; }
+    case 'db-people-save': {
+      const d = dbFind(id); if (!d) break;
+      d.people = [...dbModalPeople]; save(); closeModal(); renderDoubts(); toast('Chat updated 👥'); break; }
+    case 'db-modal-person': {
+      const pid = el.dataset.pid;
+      if (dbModalPeople.has(pid)) dbModalPeople.delete(pid); else dbModalPeople.add(pid);
+      el.classList.toggle('on');
+      break; }
+    case 'db-modal-addperson': {
+      const name = ($('#m-pname')?.value || '').trim(); if (!name){ toast('Enter a name'); break; }
+      const p = { id:uid(), name, role: $('#m-prole')?.value || 'student' };
+      state.people = state.people || []; state.people.push(p); dbModalPeople.add(p.id); save();
+      const list = $('#m-people-list'); if (list) list.innerHTML = dbPeoplePickerHtml('db-modal-person');
+      const nm = $('#m-pname'); if (nm) nm.value = '';
+      break; }
+    case 'db-del-mine': {
+      const d = dbFind(el.dataset.did); if (!d) break;
+      d.hidden = d.hidden || {}; d.hidden[el.dataset.cid] = 1;
+      save(); closeModal(); renderDoubts(); toast('Removed on this device 📱'); break; }
+    case 'db-del-all': {
+      dbDeleteMsg(el.dataset.did, el.dataset.cid); closeModal(); toast('Deleted for everyone 🌍'); break; }
+    case 'db-del-comment': {
+      dbDeleteMsg(id, el.dataset.cid); break; }
+    case 'toggle-doubt-solved': {
+      const d = (state.doubts||[]).find(x=>x.id===id); if (d){ d.solved = !d.solved; save(); render(); } break; }
+    case 'del-doubt': {
+      if (!confirm('Delete this doubt?')) break;
+      state.doubts = (state.doubts||[]).filter(x=>x.id!==id); save(); render(); toast('Deleted'); break; }
+    case 'copy-doubt': {
+      const d = (state.doubts||[]).find(x=>x.id===id); if (!d) break;
+      const txt = `Q: ${d.q}\n\n${d.a}`;
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(()=>toast('Copied ✓'), ()=>toast('Copy failed'));
+      else toast('Copy not supported here');
+      break; }
+    // coach
+    case 'chat-send': sendChat(); break;
+    case 'chat-quick': sendChat(el.dataset.q); break;
+    case 'clear-chat': state.chat = []; save(); renderCoach(); break;
+    case 'chat-action': {
+      const mi = +el.dataset.mi, ai = +el.dataset.ai;
+      const m = state.chat[mi]; const a = m?.actions?.[ai]; if (!a) break;
+      if (a.view) setView(a.view);
+      if (a.run === 'draft-sheet'){ const ctx = coachContext(); doubtFromCoach(ctx.subjects[0].id); }
+      if (a.run === 'add-goal'){ state.goals.push({ id:uid(), text:a.arg, done:false }); save(); toast(`Goal added: ${a.arg}`); }
+      break; }
+  }
+});
+
+document.addEventListener('input', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const v = +el.value;
+  switch(el.dataset.act){
+    case 'set-focus': state.settings.focusMin = clamp(v||25,5,90); if (!state.pomo.running && state.pomo.mode==='focus'){ state.pomo.remainingMs = pomoDuration('focus'); } save(); break;
+    case 'set-break': state.settings.breakMin = clamp(v||5,1,30); if (!state.pomo.running && state.pomo.mode==='break') state.pomo.remainingMs = pomoDuration('break'); save(); break;
+    case 'set-long': state.settings.longBreakMin = clamp(v||15,5,60); if (!state.pomo.running && state.pomo.mode==='longbreak') state.pomo.remainingMs = pomoDuration('longbreak'); save(); break;
+    case 'set-cycles': state.settings.cyclesBeforeLong = clamp(v||4,2,8); save(); break;
+    case 'exam-date': {
+      const s = subjById(el.dataset.sid); if (!s) break;
+      s.examDate = el.value || null; save(); render(); break; }
+    case 'pomo-subject': state.pomo.subjectId = el.value || null; state.pomo.taskId = null; save(); renderPomodoro(); break;
+    case 'pomo-task': state.pomo.taskId = el.value || null; save(); break;
+  }
+});
+
+document.addEventListener('change', e => {
+  if (e.target && e.target.id === 'm-lattfile'){ libAddAtts(e.target.files); e.target.value = ''; return; }
+  const el = e.target.closest('[data-act=set-sound]');
+  if (el){ state.settings.soundOn = el.checked; save();
+    if (el.checked && window.Notification && Notification.permission === 'default') Notification.requestPermission(); }
+});
+
+/* ============================================================
+   AUTH — local email sign-in (offline; data stays on this device)
+   ============================================================ */
+function pwHash(pw){ let h = 5381; const s = 'studybuddy·' + pw;
+  for (let i=0;i<s.length;i++) h = ((h<<5)+h+s.charCodeAt(i))|0; return 'h' + (h>>>0).toString(36); }
+function getAccounts(){ try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '{}'); } catch(e){ return {}; } }
+function setAccount(email, rec){ const a = getAccounts(); a[email] = rec;
+  try { localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(a)); } catch(e){} }
+const sessionStore = {   // stay signed in across reloads; never let storage errors break login
+  _m: null,
+  get(){ try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch(e){ return this._m; } },
+  set(v){ this._m = v; try { localStorage.setItem(SESSION_KEY, JSON.stringify(v)); } catch(e){} },
+  clear(){ this._m = null; try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
+};
+
+function showAuth(msg){
+  const el = $('#auth-screen');
+  el.style.display = 'flex';
+  const accounts = getAccounts();
+  el.innerHTML = `
+    <div class="auth-card">
+      <div class="row" style="gap:10px;align-items:center">
+        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#5b7cfa,#a75bfa);display:grid;place-items:center;font-size:17px;font-weight:800;box-shadow:0 4px 18px rgba(108,140,255,.35)">Sβ</div>
+        <div><b style="font-size:18px">..STUDY BUDDYYY..</b><div class="sub" style="margin:0">by Sbeta — sign in to your study planner</div></div>
+      </div>
+      <div class="grid" style="gap:10px;margin-top:18px">
+        <label class="f">Email<input id="a-email" type="email" placeholder="you@example.com" autocomplete="username"></label>
+        <label class="f">Password<input id="a-pass" type="password" placeholder="••••••••" autocomplete="current-password"></label>
+        <label class="f" id="a-name-row" style="display:none">Your name<input id="a-name" placeholder="How should I greet you?"></label>
+      </div>
+      <div class="auth-err" id="a-err">${msg ? esc(msg) : ''}</div>
+      <button class="btn primary" data-act="auth-submit" id="a-submit" style="width:100%">Sign in</button>
+      <div class="row" style="justify-content:flex-end;margin-top:12px">
+        <button class="btn ghost sm" data-act="auth-guest">Continue as guest →</button>
+      </div>
+      <div class="row" style="align-items:center;gap:10px;margin-top:14px">
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+        <span class="sub" style="font-size:11px">or</span>
+        <div style="flex:1;height:1px;background:var(--border)"></div>
+      </div>
+      <div id="g-btn" style="display:flex;justify-content:center;margin-top:12px;min-height:40px"></div>
+      <button class="btn ghost sm" data-act="auth-google-setup" style="width:100%;margin-top:8px">⚙ Google sign-in setup</button>
+      <div id="a-gsetup" class="sub" style="display:none;margin-top:10px;font-size:12.5px;line-height:1.6">
+        <b>One-time setup (free):</b><br>
+        1. Open <b>console.cloud.google.com</b> → APIs &amp; Services → Credentials<br>
+        2. Create Credentials → <b>OAuth client ID</b> → Web application<br>
+        3. Add this Authorized JavaScript origin: <code id="a-origin" style="color:var(--amber)">${location.origin}</code><br>
+        4. Paste your Client ID below:
+        <div class="row" style="gap:6px;margin-top:6px">
+          <input id="a-gid" placeholder="…apps.googleusercontent.com" style="flex:1">
+          <button class="btn sm primary" data-act="auth-google-save" style="flex:none">Save</button>
+        </div>
+        <div class="row" style="justify-content:flex-end;margin-top:6px">
+          <button class="btn ghost sm" data-act="auth-google-remove">Remove saved ID</button>
+        </div>         Google verifies your account; ..STUDY BUDDYYY.. stores only your name &amp; email on this device.
+      </div>
+      <p class="sub" style="margin:12px 0 0;font-size:12px">Offline app — new email? An account is created automatically. Accounts &amp; data never leave this device.</p>
+    </div>`;
+  const upd = () => {
+    const em = ($('#a-email').value||'').trim().toLowerCase();
+    const known = !!accounts[em];
+    $('#a-submit').textContent = known ? 'Sign in' : 'Create account';
+    $('#a-name-row').style.display = known ? 'none' : 'block';
+  };
+  $('#a-email').addEventListener('input', upd); upd();
+  ['#a-email','#a-pass','#a-name'].forEach(sel =>
+    $(sel)?.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); authSubmit(); } }));
+  setTimeout(()=> $('#a-email')?.focus(), 60);
+  initGoogleAuth();
+}
+function authSubmit(){
+  const email = ($('#a-email').value||'').trim().toLowerCase();
+  const pass = $('#a-pass').value || '';
+  const err = m => { $('#a-err').textContent = m; };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Enter a valid email address');
+  if (pass.length < 4) return err('Password needs at least 4 characters');
+  const accounts = getAccounts(); const rec = accounts[email];
+  let hash;
+  if (rec){
+    hash = rec.hash;
+    if (rec.hash !== pwHash(pass)) return err('Wrong password for this email');
+    user = { email, name: rec.name, since: rec.since };
+  } else {
+    hash = pwHash(pass);
+    const name = ($('#a-name').value||'').trim() || email.split('@')[0].replace(/[._\-].*/, '');
+    setAccount(email, { name, hash, since: Date.now() });
+    user = { email, name, since: Date.now() };
+  }
+  sessionStore.set({ email, hash });
+  $('#auth-screen').style.display = 'none'; $('#auth-screen').innerHTML = '';
+  startApp();
+}
+function authGuest(){
+  user = null;
+  sessionStore.set({ guest:true });
+  $('#auth-screen').style.display = 'none'; $('#auth-screen').innerHTML = '';
+  startApp();
+}
+function doLogout(){
+  if (state) save();
+  sessionStore.clear();
+  user = null; state = null;
+  showAuth();
+}
+
+/* ---------- Google sign-in (needs a free OAuth Client ID) ---------- */
+function authErr(m){ const el = $('#a-err'); if (el) el.textContent = m; }
+function googleDecodeJwt(t){
+  try {
+    const b = t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+    return JSON.parse(decodeURIComponent(atob(b).split('').map(c => '%' + ('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));
+  } catch(e){ return null; }
+}
+let _gsiLoading = false;
+function initGoogleAuth(){
+  let cid = ''; try { cid = localStorage.getItem(GOOGLE_ID_KEY) || ''; } catch(e){}
+  const box = $('#g-btn'); if (!box) return;
+  if (!cid){ box.innerHTML = '<span class="sub" style="font-size:12px">Google button appears here once a Client ID is saved below.</span>'; return; }
+  box.innerHTML = '<span class="sub" style="font-size:12px">Loading Google sign-in…</span>';
+  const setup = () => {
+    try {
+      google.accounts.id.initialize({ client_id: cid, callback: handleGoogleCredential });
+      box.innerHTML = '';
+      google.accounts.id.renderButton(box, { theme:'filled_black', size:'large', width:320, text:'signin_with', shape:'pill' });
+    } catch(e){ box.innerHTML = '<span class="sub" style="font-size:12px">Google sign-in failed to load — check the Client ID and registered origin.</span>'; }
+  };
+  if (window.google?.accounts?.id){ setup(); return; }
+  if (_gsiLoading) return; _gsiLoading = true;
+  const sc = document.createElement('script');
+  sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.defer = true;
+  sc.onload = () => { _gsiLoading = false; setup(); };
+  sc.onerror = () => { _gsiLoading = false; box.innerHTML = '<span class="sub" style="font-size:12px">Couldn\'t reach Google right now — email sign-in still works.</span>'; };
+  document.head.appendChild(sc);
+}
+function handleGoogleCredential(res){
+  const p = googleDecodeJwt(res?.credential || '');
+  if (!p || !p.email) return authErr('Google sign-in failed — no email in the response');
+  const email = String(p.email).toLowerCase();
+  const accounts = getAccounts(); let rec = accounts[email];
+  if (!rec){
+    rec = { name: p.name || email.split('@')[0], hash: 'google:' + p.sub, since: Date.now(), googleSub: p.sub };
+    setAccount(email, rec);
+  } else if (!rec.googleSub){
+    rec.googleSub = p.sub; setAccount(email, rec);   // link Google to the existing local account
+  }
+  user = { email, name: rec.name, since: rec.since };
+  sessionStore.set({ email, hash: rec.hash, google:true });
+  $('#auth-screen').style.display = 'none'; $('#auth-screen').innerHTML = '';
+  startApp();
+}
+
+/* ============================================================
+   LIBRARY — important notes & previous papers (editable by you)
+   ============================================================ */
+let libFilter = { subject:'all', kind:'all' };
+function renderLibrary(){
+  const p = $('#panel-library');
+  state.library = state.library || [];
+  const items = state.library
+    .filter(i => (libFilter.subject==='all' || i.subjectId===libFilter.subject)
+              && (libFilter.kind==='all' || i.kind===libFilter.kind))
+    .sort((a,b)=>(b.updated||0)-(a.updated||0));
+  const kindBtn = (k, lbl) => `<button class="btn sm ${libFilter.kind===k?'':'ghost'}" data-act="lib-kind" data-kind="${k}">${lbl}</button>`;
+  const subjBtn = (sid, lbl) => `<button class="btn sm ${libFilter.subject===sid?'':'ghost'}" data-act="lib-subject" data-sid="${sid}">${esc(lbl)}</button>`;
+  p.innerHTML = `
+    <div class="row" style="margin-bottom:16px">
+      <div class="grow"><h2 style="margin:0;font-size:16px">Notes &amp; Previous Papers</h2>
+        <p class="sub" style="margin:2px 0 0">Your exam bank — paste important notes, question papers and solutions. Update them anytime.</p></div>
+      <button class="btn primary" data-act="add-library">＋ Add note / paper</button>
+    </div>
+    <div class="row wrap" style="gap:6px;margin-bottom:14px">
+      ${kindBtn('all','All')}${kindBtn('note','📝 Notes')}${kindBtn('paper','📄 Papers')}
+      <span style="width:10px"></span>
+      ${subjBtn('all','All subjects')}
+      ${state.subjects.map(s=>subjBtn(s.id, s.name)).join('')}
+    </div>
+    ${items.length ? items.map(libCard).join('') : `
+      <div class="card"><div class="empty" style="margin-top:8px"><div class="big">🗂️</div>
+        Nothing here yet — add important notes or previous papers.<br>They stay on this device and you can update them anytime.
+        <br><br><button class="btn primary" data-act="add-library">＋ Add note / paper</button></div></div>`}`;
+}
+function libCard(i){
+  const s = subjById(i.subjectId); const col = s ? s.color : '#6c8cff';
+  const kindTag = i.kind==='paper' ? '<span class="tag">📄 paper</span>' : '<span class="tag">📝 note</span>';
+  return `<div class="card">
+    <div class="row wrap">
+      <b style="font-size:14px">${esc(i.title)}</b>
+      <span class="chip" style="background:${col}22;color:${col};padding:3px 10px;font-size:12px">${s?esc(s.name):'General'}</span>
+      ${kindTag}
+      ${i.meta ? `<span class="tag">${esc(i.meta)}</span>` : ''}
+      <div style="flex:1"></div>
+      <span class="tag">${timeAgo(i.updated||Date.now())}</span>
+      <button class="btn sm ghost" data-act="copy-library" data-id="${i.id}">Copy</button>
+      <button class="btn sm ghost" data-act="pdf-library" data-id="${i.id}" title="Export this note as a print-friendly PDF">⬇ PDF</button>
+      <button class="btn sm ghost" data-act="share-library" data-id="${i.id}" title="Share via WhatsApp, email or your phone's share sheet">📤 Share</button>
+      <button class="btn sm ghost" data-act="edit-library" data-id="${i.id}">✎ Edit</button>
+      <button class="btn sm danger" data-act="del-library" data-id="${i.id}">Delete</button>
+    </div>
+    ${(i.attachments||[]).length ? `<div class="lib-atts">${(i.attachments||[]).map(a=>libAttRow(a,false)).join('')}</div>` : ''}
+    <div class="sub" style="white-space:pre-wrap;margin-top:10px;max-height:280px;overflow:auto">${esc(i.body || '(empty)')}</div>
+  </div>`;
+}
+function libraryModal(editId){
+  const it = editId ? (state.library||[]).find(x=>x.id===editId) : null;
+  if (!state.subjects.length && !it){ toast('Add a subject first'); return; }
+  libAttDraft = it ? (it.attachments || []).slice() : [];
+  openModal(`
+    <h3>${it ? 'Edit' : 'New'} ${it && it.kind==='paper' ? 'previous paper' : 'note'}</h3>
+    <div class="grid" style="gap:10px">
+      <div class="grid g2">
+        <label class="f">Type
+          <select id="m-lkind">
+            <option value="note" ${it&&it.kind==='note'?'selected':''}>📝 Important note</option>
+            <option value="paper" ${it&&it.kind==='paper'?'selected':''}>📄 Previous paper</option>
+          </select></label>
+        <label class="f">Subject
+          <select id="m-lsubject">${state.subjects.map(s=>`<option value="${s.id}" ${it&&it.subjectId===s.id?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>
+      </div>
+      <label class="f">Title<input id="m-ltitle" value="${it?esc(it.title):''}" placeholder="e.g. 2023 Final — Paper 2"></label>
+      <label class="f">Label / year (optional)<input id="m-lmeta" value="${it?esc(it.meta||''):''}" placeholder="e.g. 2023 · Board · Set A"></label>
+      <label class="f">Content
+        <textarea id="m-lbody" style="min-height:150px" placeholder="Paste questions, solutions, key points…">${it?esc(it.body||''):''}</textarea></label>
+      <div class="f">Attachments — photos &amp; PDFs <span style="color:var(--muted);font-weight:400;font-size:11.5px">(PDF up to 3 MB · photos shrink automatically)</span>
+        <div id="m-latts" class="lib-atts"></div>
+        <div class="row" style="gap:8px;margin-top:8px">
+          <button class="btn sm ghost" data-act="lib-att-pick" data-kind="img">🖼️ Add photo</button>
+          <button class="btn sm ghost" data-act="lib-att-pick" data-kind="pdf">📄 Add PDF</button>
+        </div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost" data-act="modal-close">Cancel</button>
+      <button class="btn primary" data-act="save-library" data-id="${editId||''}">${it?'Save':'Add'}</button>
+    </div>
+    <input id="m-lattfile" type="file" accept="image/*,.pdf" multiple style="display:none">`);
+  libRenderAtts();
+  setTimeout(()=> $('#m-ltitle')?.focus(), 30);
+}
+
+/* ---------- render dispatcher & boot ---------- */
+function currentView(){
+  const active = $('.view-panel.active'); return active ? active.dataset.panel : 'dashboard';
+}
+function render(){
+  renderPills();
+  const v = currentView();
+  if (v==='dashboard') renderDashboard();
+  else if (v==='subjects') renderSubjects();
+  else if (v==='plan') renderPlan();
+  else if (v==='pomodoro') renderPomodoro();
+  else if (v==='flashcards') renderFlashcards();
+  else if (v==='doubts') renderDoubts();
+  else if (v==='library') renderLibrary();
+  else if (v==='coach') renderCoach();
+}
+
+function startApp(){
+  state = load();
+  if (!state){ loadDemo(); }
+  // resume a running timer after reload
+  if (state.pomo.running && state.pomo.endsAt && state.pomo.endsAt > Date.now()){
+    pomoTick = setInterval(pomoTickFn, 250);
+  } else if (state.pomo.running){
+    state.pomo.running = false; state.pomo.endsAt = null;
+    state.pomo.remainingMs = pomoDuration(state.pomo.mode); save();
+  }
+  render();
+  // once-per-day notification about today's tasks
+  if (state.settings.lastTaskNotify !== todayISO()){ state.settings.lastTaskNotify = todayISO(); save(); setTimeout(notifyTasksToday, 1200); }
+}
+/* ---------- PWA: installable app with its own icon on the home screen ---------- */
+let pwaPromptEvt = null;
+function pwaIcon(size){
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, size, size);
+  g.addColorStop(0, '#5b7cfa'); g.addColorStop(1, '#a75bfa');
+  x.fillStyle = g; x.fillRect(0, 0, size, size);
+  x.fillStyle = '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = '800 ' + Math.round(size*.42) + 'px Arial, sans-serif';
+  x.fillText('Sβ', size/2, size*.52);
+  return c.toDataURL('image/png');
+}
+function makePWA(){
+  try {
+    const m = {
+      name: '..STUDY BUDDYYY..', short_name: 'StudyBuddy',
+      description: 'Offline study planner, doubt solver, flashcards & focus timer — by Sbeta',
+      start_url: location.href.split('#')[0],
+      scope: new URL('./', location.href).href,
+      display: 'standalone', display_override: ['standalone','fullscreen'],
+      orientation: 'portrait',
+      background_color: '#0b1020', theme_color: '#0b1020',
+      icons: [192, 512].map(s => ({ src: pwaIcon(s), sizes: s+'x'+s, type: 'image/png', purpose: 'any maskable' }))
+    };
+    const link = document.getElementById('manifest-link') || document.head.appendChild(Object.assign(document.createElement('link'), { rel:'manifest', id:'manifest-link' }));
+    link.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(m));
+    const ai = document.getElementById('apple-icon') || document.head.appendChild(Object.assign(document.createElement('link'), { rel:'apple-touch-icon', id:'apple-icon' }));
+    ai.href = pwaIcon(180);
+  } catch(e){}
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pwaPromptEvt = e; renderPills(); });
+  window.addEventListener('appinstalled', () => { pwaPromptEvt = null; toast('📲 App installed — find it on your home screen'); });
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
+    // register only where sw.js is actually served (skips file:// and sandboxed previews)
+    fetch('sw.js', { method:'HEAD' }).then(r => { if (r.ok) navigator.serviceWorker.register('sw.js').catch(()=>{}); }).catch(()=>{});
+  }
+}
+async function pwaInstall(){
+  if (pwaPromptEvt){ pwaPromptEvt.prompt(); const c = await pwaPromptEvt.userChoice;
+    if (c && c.outcome === 'accepted'){ pwaPromptEvt = null; toast('Installing…'); }
+    return; }
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  toast(ios ? 'In Safari: tap Share ▲ → "Add to Home Screen"' : 'In the browser menu choose "Install app" / "Add to Home screen"');
+}
+
+(function boot(){
+  makePWA();
+  const sess = sessionStore.get();
+  if (sess && sess.guest){ user = null; startApp(); return; }
+  if (sess && sess.email){
+    const rec = getAccounts()[sess.email];
+    if (rec && rec.hash === sess.hash){ user = { email: sess.email, name: rec.name, since: rec.since }; startApp(); return; }
+  }
+  showAuth();
+})();
+
+</script>
+</body>
+</html>
