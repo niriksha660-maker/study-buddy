@@ -1,0 +1,37 @@
+{
+  "name": ".$tudy βUDDY.",
+  "short_name": ".$β.",
+  "description": "a student teacher friendly ,all in one, interactive app help to stay organised and  consistent.\nconsistency is the key to  success..",
+  "start_url": " https://study-buddy-nu-dusky.vercel.app",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "window-controls-overlay",
+    "minimal-ui",
+    "browser"
+  ],
+  "orientation": "any",
+  "background_color": "#0b1020",
+  "theme_color": "#0b1020",
+  "icons": [
+    {
+      "src": "data:[omitted-by-pwabuilder]",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:[omitted-by-pwabuilder]",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "id": "$β",
+  "dir": "auto",
+  "lang": "en",
+  "categories": [
+    "education"
+  ]
+}
