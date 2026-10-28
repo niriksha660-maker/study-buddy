@@ -1848,49 +1848,213 @@ function coachContext(){
   };
 }
 
+/* rich actions set by coachReply for quiz/planning replies, consumed by sendChat */
+let coachLastActions = [];
+
+/* ---------- deep analytics: habits, pace, forecast ---------- */
+function coachStats(){
+  const t = todayISO(), now = Date.now();
+  const dayTot = [];
+  for (let i = 0; i < 14; i++){ const iso = addDaysISO(t, -i); dayTot.unshift({ iso, min: studiedOn(iso), dow: parseISO(iso).getDay() }); }
+  const this7  = dayTot.slice(7).reduce((a,d)=>a+d.min, 0);
+  const prev7  = dayTot.slice(0,7).reduce((a,d)=>a+d.min, 0);
+  const active = dayTot.slice(7).filter(d=>d.min>0);
+  const perSub = {};
+  state.sessions.forEach(s => { if (now - s.at <= 7*DAY){ perSub[s.subjectId] = (perSub[s.subjectId]||0) + s.minutes; } });
+  const hour = new Array(24).fill(0);
+  let totalLogged = 0;
+  state.sessions.forEach(s => { hour[new Date(s.at).getHours()] += s.minutes; totalLogged += s.minutes; });
+  let bestHour = 0, bestMin = 0;
+  hour.forEach((v,i)=>{ if (v > bestMin){ bestMin = v; bestHour = i; } });
+  const bestDayDow = [0,1,2,3,4,5,6].map(d => dayTot.filter(x=>x.dow===d).reduce((a,x)=>a+x.min,0)).reduce((bi,v,i,arr)=> v>arr[bi]?i:bi, 0);
+  return {
+    dayTot, this7, prev7, trend: this7 - prev7,
+    activeDays: active.length, zero7: dayTot.slice(7).filter(d=>d.min===0).length,
+    avgActive: active.length ? Math.round(active.reduce((a,d)=>a+d.min,0)/active.length) : 0,
+    perSub, bestHour, bestMin, totalLogged,
+    bestDayName: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][bestDayDow],
+  };
+}
+function subjectMention(lower){
+  const words = lower.split(/[^a-z]+/).filter(w=>w.length>=4);
+  return state.subjects.find(s => {
+    const nm = s.name.toLowerCase();
+    return lower.includes(nm) || words.some(w => w.length>=4 && (nm.startsWith(w.slice(0,4)) || w.startsWith(nm.slice(0,4))));
+  }) || null;
+}
+function requiredPace(s){                       // s = coachContext subject entry
+  if (s.days == null || s.days < 0 || s.pr.n <= s.pr.d) return null;
+  return { remaining: s.pr.n - s.pr.d, perDay: Math.ceil((s.pr.n - s.pr.d) / s.days) };
+}
+function findSubject(id){ return state.subjects.find(s=>s.id===id); }
+
+/* ---------- remember what the coach recommended, for accountability ---------- */
+function rememberPick(subId, topicName){
+  state.coach = state.coach || {};
+  state.coach.lastPick = { subjectId: subId, topic: topicName, at: Date.now() };
+  save();
+}
+
 function coachReply(q){
   const ctx = coachContext();
+  const st  = coachStats();
+  coachLastActions = [];   // reset per-question
   const lower = q.toLowerCase();
-  const nameList = ctx.subjects.map(s=>s.name);
-  const mentioned = ctx.subjects.find(s => lower.includes(s.name.toLowerCase()));
+  const s0 = ctx.subjects[0];
+  const mentioned = subjectMention(lower);
+  let coachAct = [];                              // rich actions for this reply
+  const evening = new Date().getHours() >= 21;
+  const mins =   (lower.match(/(\d+)\s*(?:hours?|hrs?|h\b)/) ? +RegExp.$1*60 : 0)
+               + (lower.match(/(\d+)\s*(?:mins?|minutes?)/) ? +RegExp.$1 : 0);
 
-  // --- intents ---
   if (ctx.subjects.length === 0)
     return "Let's start from scratch: head to **Subjects**, add each course with its exam date, and list the syllabus as topics. Then come back and ask me to *plan my week* — I'll do the scheduling.";
 
   if (/\b(hi|hello|hey|help|what can you)\b/.test(lower))
-    return `I'm your study coach. Here's what I can do right now:\n• **Plan my day / week** — I'll schedule blocks around your exams\n• **What should I study?** — I'll pick the highest-priority topic\n• **Am I on track?** — honest readiness check per exam\n• **Set goals** — I'll propose today's goals\nYour nearest exam: **${ctx.subjects[0].name}** (${ctx.subjects[0].days}d).`;
+    return `I'm your study coach — and I know your history, not just your plan. Ask me things like:\n• **Plan my day** — concrete blocks with subjects and minutes\n• **What should I study?** — highest-priority topic right now\n• **Am I on track?** — honest readiness check per exam\n• **Will I finish in time?** — pace forecast vs exam date\n• **How much did I study this week?** — or "how much physics"\n• **When do I study best?** — your real peak hours\n• **Quiz me** — instant recall practice\n• **Set goals** — today's targets\nNearest exam: **${s0.name}** (${s0.days}d).`;
 
-  if (/(plan|schedule|timetable|what.*today|my day|my week)/.test(lower)){
-    if (!ctx.planned){ const r = buildPlan(); return `Done — I've generated a full plan. ${r.note}\nCheck the **Study Plan** tab. Today's blocks are waiting on the dashboard. 🎯`; }
-    const left = ctx.subjects[0];
-    return `Today you have **${fmtMin(ctx.planned)}** planned (${state.tasks.filter(x=>x.date===ctx.t && !x.done).length} blocks left) and you've logged **${fmtMin(ctx.studied)}**.\nStart with the first uncompleted block on the dashboard. ${left.days<7 ? `${left.name} is in ${left.days} days — protect that time.` : 'Stay consistent and the plan does the work.'}\nWant a fresh schedule? Say **rebuild my plan**.`; }
+  /* ---- concrete hour/day planning (also "I have 3 hours") ---- */
+  if (/(plan|schedule|timetable|what.*today|my day|my week)/.test(lower) || mins){
+    const budget = mins || Math.max(state.settings.dailyTargetMin - ctx.studied, 0);
+    if (!budget) return `You've already hit today's **${fmtMin(state.settings.dailyTargetMin)}** target 🎉. Light review only: clear ${ctx.dueCards||0} due cards or re-read solved doubts.\nWant tomorrow's schedule instead? Say **plan tomorrow**.`;
+    const pool = ctx.subjects.filter(s => requiredPace(s) || s.pr.pct < 100).slice(0,3);
+    if (!pool.length) return `Everything is done and dusted ✅. Keep fresh with recall: **quiz me**.`;
+    const weights = pool.map(s => {
+      const rp = requiredPace(s);
+      return rp ? rp.perDay * (7 - s.confidence) : 0.5;
+    });
+    const wsum = weights.reduce((a,b)=>a+b,0) || 1;
+    let left = budget, blocks = [];
+    pool.forEach((s,i)=>{
+      if (i === pool.length-1 || left <= 10) return;
+      const m = Math.max(15, Math.round(budget*weights[i]/wsum/5)*5);
+      if (m < left){ blocks.push({s, m}); left -= m; }
+    });
+    blocks.push({s: pool[pool.length-1], m: left});
+    coachAct = blocks.map(b => ({ label:`＋ ${b.s.name}: ${fmtMin(b.m)}`, run:'add-task', arg:{ subjectId:b.s.id, title:`Focus: ${nextTopic(b.s)?.name || 'review & recall'}`, minutes:b.m } }));
+    coachLastActions = coachAct;
+    rememberPick(blocks[0].s.id, nextTopic(blocks[0].s)?.name || 'review & recall');
+    const lines = blocks.map(b => {
+      const topic = nextTopic(b.s);
+      const topicName = topic ? `${topic.name} (difficulty ${DIFF_LABEL[topic.difficulty]})` : 'review & recall';
+      return `• **${b.s.name}** — ${fmtMin(b.m)} → ${topicName} ${b.s.days<7?`(exam ${b.s.days}d)`:''}`;
+    });
+    return `${mins ? `Planning around your **${fmtMin(mins)}**.\n` : ''}Today's blocks, prioritised by exam urgency, weak confidence and weights:\n${lines.join('\n')}\nStart with **${blocks[0].s.name}** ${evening?'— and wrap up soon, it\'s late. Sleep is part of studying.':'first while focus is fresh.'}\nTap a ＋ button to drop any block straight into your tasks.`;
+  }
 
   if (/(rebuild|regenerate|new plan)/.test(lower)){
     const r = buildPlan(); return `Rebuilt ✨ ${r.note}`; }
 
-  if (/(what should i study|what next|priority|first|focus on)/.test(lower)){
-    const s = mentioned || ctx.subjects[0];
-    const topic = nextTopic(s);
-    if (!topic) return `${s.name} is fully done 🎉 — everything is ticked off. Try mixed recall or past papers next.`;
-    return `Highest priority right now: **${s.name} → ${topic.name}** (difficulty ${DIFF_LABEL[topic.difficulty]}, ${s.days ?? '?'} days to exam).\nReasoning: exam is close, confidence is ${s.confidence}/5, and this is one of the hardest topics left.\nHit **▶ Start recommended session** on the dashboard and I'll pair the timer with it.`; }
+  if (/(tomorrow)/.test(lower)){
+    const t2 = addDaysISO(ctx.t, 1);
+    const planned2 = plannedOn(t2);
+    const tasks2 = state.tasks.filter(x=>x.date===t2 && !x.done);
+    if (!planned2) return `Nothing planned for tomorrow yet. Ask the **AI planner** to generate — then tomorrow gets blocks automatically (it plans 14 days ahead).`;
+    const morning = state.settings.dailyTargetMin * 0.4;
+    return `Tomorrow you have **${fmtMin(planned2)}** planned across ${tasks2.length} block(s):\n${tasks2.slice(0,5).map(x=>`• ${subjById(x.subjectId)?.name||'—'}: ${x.title} (${x.minutes}m)`).join('\n')}\nTomorrow's single most important thing: ${tasks2[0] ? `**${subjById(tasks2[0].subjectId)?.name||'—'} → ${tasks2[0].title}**` : 'start with recall'}. Do it before anything social.`; }
 
+  /* ---- priority pick ---- */
+  if (/(what should i study|what next|priority|first|focus on)/.test(lower)){
+    const s = mentioned || ctx.subjects.find(s=>requiredPace(s)) || s0;
+    const topic = nextTopic(s);
+    if (!topic) return `${s.name} is fully done 🎉 — everything ticked off. Try mixed recall (**quiz me**) or attempt the hardest past-paper section you can find.`;
+    rememberPick(s.id, topic.name);
+    const paceInfo = requiredPace(s);
+    const speedNote = st.avgActive ? `Your recent speed (~${fmtMin(st.avgActive)} on study days) fits roughly ${Math.max(1,Math.floor(st.avgActive/45))} topic block(s)/day.` : '';
+    return `Study this next: **${s.name} → ${topic.name}** (difficulty ${DIFF_LABEL[topic.difficulty]}, ${s.days ?? '?'}d to exam).\nWhy: exam proximity + confidence ${s.confidence}/5 + hardest remaining topic.${paceInfo ? ` You need ~${paceInfo.perDay}/day to cover **${paceInfo.remaining}** topics in time.` : ''}\n${speedNote}\nI've saved this as my recommendation — tell me **done** (or **didn't do it**) later and let's see if you've actually started it 😉. Hit **▶ Start recommended session** to pair the timer.`;
+  }
+
+  /* ---- accountability: did you do what I recommended? ---- */
+  if (/\b(done it|did it|i did it|did i (do|finish|complete|manage|crack)|didnt do (it|that|my)|didn.?t do (it|that|my))\b/.test(lower)){
+    const pick = state.coach?.lastPick;
+    if (!pick) return `I haven't given you a specific suggestion yet — ask **what should I study** and I'll pick one (and then keep you honest 😄).`;
+    const since = state.sessions.filter(x => x.at >= pick.at);
+    const did = since.some(x => x.subjectId === pick.subjectId);
+    const minsDone = state.sessions.filter(x => x.subjectId === pick.subjectId && x.at >= pick.at).reduce((a,x)=>a+x.minutes,0);
+    return did
+      ? `Yes — I can see **${fmtMin(minsDone)} on ${findSubject(pick.subjectId)?.name || 'it'}** since I recommended *${pick.topic}* (${timeAgo(pick.at)}). ${minsDone>=45?'That\'s a proper block, keep stacking 🔥':'Good start — one more block and that topic is truly banked.'}`
+      : `Checking… no study sessions on **${findSubject(pick.subjectId)?.name || 'it'}** since my pick of *${pick.topic}* — that was ${timeAgo(pick.at)}. No guilt, just physics: the clock still moves. **One ${state.settings.focusMin}m block now** and you're back in the game. Want me to start the timer plan?`;
+  }
+
+  /* ---- readiness check (now with real pace data) ---- */
   if (/(on track|ready|how am i|progress|readiness)/.test(lower)){
     const lines = ctx.subjects.map(s => {
-      const pace = s.days > 0 && s.pr.n > s.pr.d ? Math.ceil((s.pr.n - s.pr.d) / s.days) : 0;
-      const verdict = s.pr.pct >= 80 ? 'on track ✅' : s.pr.pct >= 50 ? 'close, but push ⚠️' : s.days <= 7 ? 'at risk 🔴' : 'needs momentum 🟡';
-      return `• **${s.name}** — ${s.pr.pct}% done, exam in ${s.days ?? '—'}d, confidence ${s.confidence}/5 → ${verdict}${pace ? ` (tick ~${pace} topic(s)/day)` : ''}`;
+      const pace = requiredPace(s);
+      const actual = st.perSub[s.id] || 0;
+      const verdict = !s.examDate || s.days < 0
+        ? (s.pr.pct>=80?'done-zone ✅':'in progress 🟡')
+        : s.pr.pct >= 80 ? 'on track ✅'
+        : s.pr.pct >= 50 ? 'close, but push ⚠️'
+        : s.days <= 7 ? 'at risk 🔴' : 'needs momentum 🟡';
+      const actualNote = actual ? ` · last7d: ${fmtMin(actual)}` : ' · no recent sessions';
+      return `• **${s.name}** — ${s.pr.pct}% done, exam ${s.days ?? '—'}d${actualNote} → ${verdict}${pace ? ` (~${pace.perDay} topic(s)/day needed)` : ''}`;
     });
-    return `Readiness check:\n${lines.join('\n')}\n${ctx.dueCards ? `Also: **${ctx.dueCards} flashcards due** — recall first, always.` : 'Recall deck is clear — nice.'}`; }
+    const slack = (s)=> { const p = requiredPace(s); return p ? Math.max(0, p.perDay - Math.max(1,Math.floor((st.perSub[s.id]||0)/45))) : 0; };
+    const risky = ctx.subjects.filter(s => requiredPace(s) && (st.perSub[s.id]||0) < 20 && s.days <= 7);
+    let extra = '';
+    if (risky.length) extra = `\n⚠️ Watch out: ${risky.map(s=>`**${s.name}**`).join(', ')} exam${risky.length>1?'s are':' is'} within a week but got less than 20m in the last 7 days. Fix that first.`;
+    if (st.zero7 >= 3) extra += `\nAlso you skipped ${st.zero7} of the last 7 days — consistency is this week's actual problem, not difficulty.`;
+    return `Readiness check (your data, not vibes):\n${lines.join('\n')}\n${ctx.dueCards ? `Plus **${ctx.dueCards} flashcards due** — recall first, always.` : 'Recall deck is clear — nice.'}${extra}`;
+  }
 
+  /* ---- forecast: will I finish in time? ---- */
+  if (/(finish|in time|pace|forecast|enough time|make it)/.test(lower)){
+    const rows = ctx.subjects.map(s => {
+      const p = requiredPace(s);
+      if (!p) return `• **${s.name}** — syllabus complete or exam passed (${s.pr.pct}% banked).`;
+      const speed = st.avgActive ? Math.max(1, Math.floor(st.avgActive/45)) : 1; // assumed ~45m/topic block
+      const ok = speed >= p.perDay;
+      const verdict = ok
+        ? `✅ fits — at ~${speed} topic(s)/day you'd finish with ${s.days - Math.ceil(p.remaining/speed)} day(s) to spare`
+        : `🔴 tight/behind — you need ${p.perDay}/day, current speed suggests ~${speed}/day. Cut scope (mark optional topics) or add ${Math.ceil((p.perDay-speed)*45)}m daily`;
+      return `• **${s.name}** — ${p.remaining} topics left, ${s.days}d. ${verdict}`;
+    });
+    return `Finish-line forecast:\n${rows.join('\n')}${st.avgActive ? '' : '\n(thin history so far — log a few sessions and this forecast gets sharp)'}`;
+  }
+
+  /* ---- data Q&A ---- */
+  if (/(how (much|many).*(stud|time|hour|min)|total.*stud|hours? (did|have)|log|history|where.*time)/.test(lower)){
+    const t = todayISO();
+    const today = ctx.studied;
+    if (mentioned){
+      const m = st.perSub[mentioned.id] || 0;
+      const last14All = state.sessions.filter(x=>x.subjectId===mentioned.id && (Date.now()-x.at) <= 14*DAY).reduce((a,x)=>a+x.minutes,0);
+      return `**${mentioned.name}** study time:\n• Last 7 days: **${fmtMin(m)}**\n• Last 14 days: ${fmtMin(last14All)}\n• All-time on this device: ${fmtMin(state.sessions.filter(x=>x.subjectId===mentioned.id).reduce((a,x)=>a+x.minutes,0))}\n${m < 0.2*state.settings.dailyTargetMin && mentioned.examDate ? `⚠️ That's thin for an exam in ${mentioned.days}d.` : 'Solid allocation.'}`;
+    }
+    const subs = state.subjects.map(s => ({ s, m: st.perSub[s.id] || 0 })).sort((a,b)=>b.m-a.m);
+    return `Your numbers:\n• **Today:** ${fmtMin(today)} (target ${fmtMin(state.settings.dailyTargetMin)})\n• **Last 7 days:** ${fmtMin(st.this7)} · previous week ${fmtMin(st.prev7)} → ${st.trend>=0?'**+'+fmtMin(Math.abs(st.trend))+'** up 📈':'**'+fmtMin(Math.abs(st.trend))+'** down 📉'}\n• Study days: ${st.activeDays}/7 · avg ${fmtMin(st.avgActive)} per active day\n${subs.length?`• Split (7d): ${subs.map(x=>`${x.s.name} ${fmtMin(x.m)}`).join(' · ')}`:''}\nAll data is local — nothing has ever left ${'your device'}.`;
+  }
+
+  if (/(best time|peak|when.*should.*study|when do i)/.test(lower)){
+    if (!st.totalLogged) return `I don't have enough session history yet to find your peak window — study honestly for a few days (tap ▶ in Focus Timer) and ask me again.`;
+    const hh = st.bestHour;
+    const nice = `${String(hh).padStart(2,'0')}:00–${String(hh+1||0).padStart(2,'0')}:00`.replace('24:','00:');
+    return `Your real peak: **${nice}** — that hour holds your most logged minutes. And your strongest weekday: **${st.bestDayName}**.\nSchedule the hardest topic there. Your ${fmtMin(st.bestMin)} peak beats willpower: match the plan to your energy, not against it.`;
+  }
+
+  /* ---- quiz me ---- */
+  if (/(quiz|test me|practice question|recall practice)/.test(lower)){
+    const decks = mentioned ? state.decks.filter(d=>d.subjectId===mentioned.id) : state.decks;
+    const dueCards = decks.flatMap(d => d.cards.filter(c => new Date(c.due).getTime() <= Date.now()));
+    const pool = dueCards.length ? dueCards : decks.flatMap(d=>d.cards);
+    if (!pool.length) return `No cards${mentioned?` in ${mentioned.name}`:''} to quiz you on yet. **Flashcards** → create a deck, add 5–10 questions per topic — writing the question is itself revision.`;
+    const c = pool[Math.floor(Math.random()*pool.length)];
+    const deck = state.decks.find(d=>d.cards.some(x=>x.id===c.id));
+    coachAct = [{ label:'👀 Show answer', run:'show-answer', arg:{ back:c.back, deck:deck?.name||'' } }];
+    coachLastActions = coachAct;
+    return `Quick quiz — **Q: ${c.front}**\n(from ${deck?.name||'your deck'}${dueCards.length?' · due':''}) — think first, then reveal.`;
+  }
+
+  /* ---- goals ---- */
   if (/(goal|goals)/.test(lower)){
     const gs = suggestGoals();
     return `Here are today's goals — tap to add any of them:\n` + gs.map(g=>`▸ ${g}`).join('\n'); }
 
+  /* ---- flashcards/decks ---- */
   if (/(flashcard|recall|memoriz|memoris|revise|review)/.test(lower)){
     const deckCount = state.decks.reduce((a,d)=>a+d.cards.length,0);
     return ctx.dueCards
-      ? `You have **${ctx.dueCards} cards due** across your decks (${deckCount} total). Active recall is the highest-value 25 minutes you can spend — open **Flashcards** and clear them before new material.`
+      ? `You have **${ctx.dueCards} cards due** across your decks (${deckCount} total). Active recall is the highest-value 25 minutes you can spend — clear them before new material. Or say **quiz me** right here.`
       : deckCount ? `Recall deck is clear ✅. Next cards return over the coming days (spaced repetition). Meanwhile: teach a topic aloud from your notes, or re-attempt a solved doubt.`
       : `No decks yet. Create a deck per subject in **Flashcards** and add 5–10 question cards per topic. Writing the question is itself revision.`; }
 
@@ -1900,26 +2064,35 @@ function coachReply(q){
   if (/(pomodoro|timer|25|break)/.test(lower))
     return `Pomodoro recipe: ${state.settings.focusMin}m focus / ${state.settings.breakMin}m break, long break after ${state.settings.cyclesBeforeLong} cycles. Pair each timer with a subject so your stats stay honest. Open **Focus Timer** and press ▶.`;
 
-  if (/(procrastin|lazy|motivat|tired|overwhelm|stress|anxious)/.test(lower)){
-    const s = ctx.subjects[0];
-    return `Overwhelm is usually an unbounded to-do list. Fix:\n1. Commit to **one ${state.settings.focusMin}m block** on **${s.name} → ${nextTopic(s)?.name || 'review'}** — nothing else.\n2. Phone in another room.\n3. After the block, take the ${state.settings.breakMin}m break guilt-free.\nMomentum beats motivation. Start the timer and I'll log it.`; }
+  if (/(procrastin|lazy|motivat|tired|overwhelm|stress|anxious|panick)/.test(lower)){
+    const s = mentioned || s0;
+    const topic = nextTopic(s);
+    const tiny = Math.max(10, Math.min(15, state.settings.focusMin));
+    return `Overwhelm is usually an unbounded to-do list. Let's shrink the world:\n1. Commit to **one ${tiny}m block** on **${s.name} → ${topic?.name || 'review'}** — nothing else counts.\n2. Phone in another room, notifications off.\n3. After the block: ${state.settings.breakMin}m break, guilt-free.\nMomentum beats motivation. ${st.zero7>=4?`(Fair warning — you've skipped ${st.zero7} of the last 7 days, so start smaller than feels necessary.)`:`Press ▶ on the Focus Timer and I'll log it.`}`;
+  }
 
-  if (/(exam|test) .*(tomorrow|today|next week)/.test(lower) || (mentioned && mentioned.days <= 2)){
-    const s = mentioned || ctx.subjects[0];
-    return `**${s.name}** is ${s.days===0?'TODAY':`tomorrow`} — switch modes:\n• No new topics. Review solved doubts + flashcards only.\n• Do one past paper section under time.\n• Sleep is a study technique: stop by ${state.settings.dailyTargetMin>240?'22:30':'23:00'}.\nYou've got ${s.pr.pct}% of the syllabus banked — trust it.`; }
+  if (/(exam|test) .*(tomorrow|today|next week)/.test(lower) || (mentioned && mentioned.days !== null && mentioned.days <= 2)){
+    const s = mentioned || s0;
+    return `**${s.name}** is ${s.days===0?'**TODAY**':'tomorrow'} — switch modes:\n• No new topics. Review solved doubts + flashcards only.\n• Do one past-paper section under time pressure.\n• Sleep is a study technique: last full review by 21:00, screens off after.\nYou've got ${s.pr.pct}% of the syllabus banked — trust the work, not the panic.`; }
 
-  // default: situational summary
-  const s = ctx.subjects[0];
-  return `Here's where you stand:\n• Nearest exam: **${s.name}** in ${s.days}d (${s.pr.pct}% syllabus done)\n• Today: ${fmtMin(ctx.studied)} studied / ${fmtMin(ctx.planned)} planned\n• ${ctx.dueCards} cards due · streak ${ctx.streak}d\n\nSay **plan my day**, **what should I study**, **am I on track**, or **set goals** — or mention a subject by name.`;
+  /* ---- default: situational summary ---- */
+  const s = s0;
+  const habit = st.totalLogged
+    ? `this week: ${fmtMin(st.this7)} (${st.trend>=0?'+':''}${fmtMin(st.trend)} vs last week)`
+    : 'no sessions logged yet — tap ▶ in Focus Timer to start the ledger';
+  return `Here's where you stand:\n• Nearest exam: **${s.name}** in ${s.days}d (${s.pr.pct}% syllabus done)\n• Today: ${fmtMin(ctx.studied)} logged / ${fmtMin(ctx.planned)} planned · ${ctx.dueCards} cards due · streak ${ctx.streak}d\n• ${habit}\n\nAsk: **plan my day**, **what should I study**, **am I on track**, **will I finish in time**, **how much did I study**, **when do I study best**, **quiz me** — or mention a subject.`;
 }
 
 function suggestGoals(){
-  const ctx = coachContext(); const out = [];
+  const ctx = coachContext();
+  const st = coachStats();
+  const out = [];
   if (ctx.dueCards) out.push(`Clear ${ctx.dueCards} due flashcards`);
-  const s = ctx.subjects[0];
+  const s = ctx.subjects.find(x=>requiredPace(x)) || ctx.subjects[0];
   if (s){ const topic = nextTopic(s); if (topic) out.push(`Study ${s.name}: ${topic.name}`); }
   if (ctx.studied < state.settings.dailyTargetMin)
     out.push(`Reach ${fmtMin(state.settings.dailyTargetMin)} total study time today`);
+  if (st.zero7 >= 2) out.push(`Show up today — ${st.zero7} of the last 7 days were empty`);
   if (!state.decks.length) out.push('Create a flashcard deck for one subject');
   if (out.length < 3) out.push('One 25m solved-doubt revision sprint');
   return out.slice(0,4);
@@ -1943,7 +2116,7 @@ function renderCoach(){
         : `<div class="msg coach">${mdLite(introMessage())}</div>`}
       </div>
       <div class="chiprow">
-        ${['Plan my day','What should I study?','Am I on track?','Set goals','Motivate me'].map(c=>
+        ${['Plan my day','What should I study?','Am I on track?','Will I finish in time?','How much did I study?','When do I study best?','Quiz me','Did I do it?','Set goals','Motivate me'].map(c=>
           `<button class="chipbtn" data-act="chat-quick" data-q="${esc(c)}">${c}</button>`).join('')}
       </div>
       <div class="chat-input">
@@ -1970,13 +2143,20 @@ function sendChat(preset){
   if (!text) return;
   state.chat.push({ role:'user', text, t:Date.now() });
   const reply = coachReply(text);
+  const lower = text.toLowerCase();
   const actions = [];
   if (/rebuild|generate/i.test(reply)) actions.push({ label:'✨ Open Study Plan', view:'plan' });
-  if (/doubt/i.test(text)){ actions.push({ label:'🙋 Solve it', view:'doubts' }); }
-  const goals = suggestGoals();
-  if (text.toLowerCase().includes('goal')){
-    goals.forEach(g => actions.push({ label:`＋ ${g}`, run:'add-goal', arg:g }));
+  if (/doubt/i.test(lower)){ actions.push({ label:'🙋 Solve it', view:'doubts' }); }
+  if (lower.includes('goal')){
+    suggestGoals().forEach(g => actions.push({ label:`＋ ${g}`, run:'add-goal', arg:g }));
   }
+  if (/flashcard|recall|quiz/i.test(reply) && /flashcard|recall/i.test(lower) && !/no decks/i.test(reply))
+    actions.push({ label:'🃏 Open Flashcards', view:'flashcards' });
+  if (/pomodoro|focus timer/i.test(reply))
+    actions.push({ label:'▶ Open Focus Timer', view:'pomodoro' });
+  // quiz/planning replies attach their own rich actions via coachLastActions
+  if (coachLastActions.length) actions.push(...coachLastActions);
+  coachLastActions = [];
   state.chat.push({ role:'coach', text:reply, t:Date.now(), actions });
   save();
   renderCoach();
@@ -2623,6 +2803,16 @@ document.addEventListener('click', e => {
       if (a.view) setView(a.view);
       if (a.run === 'draft-sheet'){ const ctx = coachContext(); doubtFromCoach(ctx.subjects[0].id); }
       if (a.run === 'add-goal'){ state.goals.push({ id:uid(), text:a.arg, done:false }); save(); toast(`Goal added: ${a.arg}`); }
+      if (a.run === 'add-task'){
+        const arg = a.arg || {};
+        state.tasks.push({ id:uid(), subjectId:arg.subjectId||state.subjects[0]?.id, title:arg.title||'Focus block', date:todayISO(), minutes:arg.minutes||25, done:false, source:'manual' });
+        save(); toast(`Task added for today: ${arg.title||'Focus block'} (${arg.minutes||25}m)`);
+        if ($('panel-plan')) render();
+      }
+      if (a.run === 'show-answer'){
+        state.chat.push({ role:'coach', text:`**Answer:** ${a.arg.back}\n(from ${a.arg.deck}) — did you get it right? If not, that card comes back tomorrow — spaced repetition does its job.`, t:Date.now() });
+        save(); renderCoach();
+      }
       break; }
   }
 });
