@@ -448,57 +448,6 @@ function nextExam(){
   return upcoming[0] || null;
 }
 
-/* ---------- demo data ---------- */
-function loadDemo(){
-  const t = todayISO();
-  const tk = (name, difficulty, done=false) => ({ id:uid(), name, done, difficulty });
-  const math = { id:uid(), name:'Mathematics', color:'#6c8cff', examDate:addDaysISO(t,18), confidence:3, weight:3, topics:[
-    tk('Quadratic equations',1,true), tk('Trigonometric identities',2), tk('Calculus: derivatives',3),
-    tk('Calculus: integration',3), tk('Probability',2), tk('Statistics basics',1,true),
-    tk('Vectors',2), tk('Sequences & series',2) ]};
-  const phys = { id:uid(), name:'Physics', color:'#2dd4a0', examDate:addDaysISO(t,9), confidence:2, weight:3, topics:[
-    tk('Kinematics',1,true), tk("Newton's laws",2), tk('Work, energy & power',2), tk('Momentum',2),
-    tk('Circular motion',3), tk('Waves & sound',2), tk('Optics basics',1) ]};
-  const hist = { id:uid(), name:'History', color:'#f5b04c', examDate:addDaysISO(t,31), confidence:4, weight:1, topics:[
-    tk('Causes of World War I',2,true), tk('Interwar period',2), tk('World War II',3), tk('The Cold War',2) ]};
-  const now = Date.now();
-  const card = (front, back, box=1, dueOffsetMin=0) => ({ id:uid(), front, back, box, due:new Date(now - 60000 + dueOffsetMin*60000).toISOString() });
-  const decks = [
-    { id:uid(), subjectId:phys.id, name:'Physics — core recall', cards:[
-      card("State Newton's second law", 'F = ma — net force equals mass × acceleration. Give a worked example with units.'),
-      card('Define momentum & its unit', 'p = mv, measured in kg·m/s. In a closed system momentum is conserved.'),
-      card('Kinematics: the 3 SUVAT equations', 'v = u + at;  s = ut + ½at²;  v² = u² + 2as (constant a only).'),
-      card('When is work done zero?', 'When force is perpendicular to displacement, e.g. circular motion — W = Fd cosθ, cos90° = 0.', 2, 60000)]},
-    { id:uid(), subjectId:math.id, name:'Maths — formulas', cards:[
-      card('Quadratic formula', 'x = (−b ± √(b² − 4ac)) / 2a. Discriminant > 0 → two roots, = 0 → one, < 0 → none (real).'),
-      card('sin²θ + cos²θ = ?', '1. Divide by cos²θ to get 1 + tan²θ = sec²θ.')]},
-  ];
-  const doubts = [
-    { id:uid(), subjectId:phys.id, q:'A car brakes from 20 m/s and stops in 50 m. What was its deceleration?',
-      a:'**1.** List what you know: u = 20 m/s, v = 0, s = 50 m, a = ?\n\n**2.** Pick a SUVAT equation without time: v² = u² + 2as.\n\n**3.** Solve: 0 = 400 + 2a·50 → 100a = −400 → **a = −4 m/s²**.\n\n**Why:** the negative sign just means the car slows down. Write it as 4 m/s² deceleration in the answer.', tags:['Kinematics','SUVAT'], solved:true },
-    { id:uid(), subjectId:math.id, q:'When do I use integration vs differentiation?',
-      a:'**Rule of thumb:**\n• Differentiation → rates of change, gradients, velocity from displacement.\n• Integration → accumulation, areas, displacement from velocity.\n\n**Check:** does the question ask *how fast something changes* → differentiate. Does it ask *total of something built up over time* → integrate.', tags:['Calculus'], solved:true }
-  ];
-  const tasks = [
-    { id:uid(), subjectId:phys.id, title:"Study: Newton's laws", date:t, minutes:50, done:false, source:'plan' },
-    { id:uid(), subjectId:phys.id, title:'Active recall — flashcards (Physics)', date:t, minutes:25, done:true, source:'plan' },
-    { id:uid(), subjectId:phys.id, title:'Revise solved doubts (Physics)', date:t, minutes:15, done:false, source:'plan' },
-    { id:uid(), subjectId:math.id, title:'Study: Calculus — derivatives', date:addDaysISO(t,1), minutes:75, done:false, source:'plan' },
-  ];
-  const sessions = [
-    { id:uid(), subjectId:phys.id, minutes:25, at: now - 3*3600000 },
-    { id:uid(), subjectId:math.id, minutes:25, at: now - 1*DAY - 3600000 },
-    { id:uid(), subjectId:phys.id, minutes:50, at: now - 1*DAY - 2*3600000 },
-    { id:uid(), subjectId:math.id, minutes:25, at: now - 2*DAY - 3600000 },
-    { id:uid(), subjectId:phys.id, minutes:50, at: now - 3*DAY - 3600000 },
-  ];
-  state = Object.assign(defaultState(), { subjects:[math,phys,hist], decks, doubts, tasks, sessions,
-    goals: [ { id:uid(), text:'Clear all due flashcards today', done:false },
-             { id:uid(), text:'Revise the solved doubts before each exam', done:false } ],
-    chat: [] });
-  save();
-}
-
 /* ---------- tiny UI kit ---------- */
 function toast(msg){ const el = $('#toast'); el.textContent = msg; el.classList.add('show');
   clearTimeout(toast._t); toast._t = setTimeout(()=> el.classList.remove('show'), 2400); }
@@ -730,8 +679,7 @@ function renderSubjects(){
       <div class="card"><h2>Subjects & Syllabus</h2>
         <div class="empty" style="margin-top:12px"><div class="big">📚</div>
           Add your first subject with its exam date.<br>The AI planner schedules topics by weight, confidence and time left.
-          <br><br><button class="btn primary" data-act="add-subject-modal">+ Add subject</button>
-          <button class="btn" data-act="load-demo" style="margin-left:8px">Load demo data</button></div></div>`;
+          <br><br><button class="btn primary" data-act="add-subject-modal">+ Add subject</button></div></div>`;
     return;
   }
   p.innerHTML = `
@@ -2366,7 +2314,6 @@ document.addEventListener('click', e => {
       if (t){ t.done = !t.done; save(); render(); } break; }
     case 'del-topic': {
       const s = subjById(el.dataset.sid); s.topics = s.topics.filter(x=>x.id!==el.dataset.id); save(); render(); break; }
-    case 'load-demo': loadDemo(); render(); toast('Demo data loaded — explore, then clear and add your own'); break;
     // library
     case 'add-library': libraryModal(); break;
     case 'edit-library': libraryModal(id); break;
@@ -2995,7 +2942,7 @@ function render(){
 
 function startApp(){
   state = load();
-  if (!state){ loadDemo(); }
+  if (!state){ state = defaultState(); save(); }
   // resume a running timer after reload
   if (state.pomo.running && state.pomo.endsAt && state.pomo.endsAt > Date.now()){
     pomoTick = setInterval(pomoTickFn, 250);
