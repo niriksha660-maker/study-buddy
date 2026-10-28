@@ -293,6 +293,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none
   #auth-screen{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:radial-gradient(900px 600px at 15% 0%,#16203a,#0b0f1a 70%)}
   .auth-card{width:min(420px,92vw);background:#131a2b;border:1px solid var(--border);border-radius:18px;padding:26px;box-shadow:0 24px 80px rgba(0,0,0,.55)}
   .auth-err{color:var(--red);font-size:12.5px;min-height:18px;margin:6px 0 2px}
+  .auth-tabs{display:flex;background:#0d1424;border:1px solid var(--border);border-radius:12px;padding:4px;margin:18px 0 14px}
+  .auth-tabs button{flex:1;padding:9px 6px;border-radius:9px;background:transparent;border:none;color:var(--muted);font:inherit;font-weight:700;cursor:pointer;transition:all .15s}
+  .auth-tabs button:hover{color:var(--text)}
+  .auth-tabs button.active{background:linear-gradient(135deg,#5b7cfa,#7c5bfa);color:#fff;box-shadow:0 3px 12px rgba(108,140,255,.35)}
   .user-chip{display:flex;align-items:center;gap:9px;padding:8px 9px;margin-bottom:8px;border:1px solid var(--border);border-radius:10px;background:#131a2b}
   .avatar{width:30px;height:30px;flex:none;border-radius:50%;background:var(--accent);color:#0b0f1a;display:grid;place-items:center;font-weight:800;font-size:13px}
   .uc-n{font-weight:700;font-size:12.5px;line-height:1.2}
@@ -2426,7 +2430,9 @@ document.addEventListener('click', e => {
       libRenderAtts(); break; }
     // auth
     case 'logout': doLogout(); break;
+    case 'auth-tab': setActiveAuthPane(el.dataset.pane); break;
     case 'auth-submit': authSubmit(); break;
+    case 'auth-signup-submit': authSignUp(); break;
     case 'auth-guest': authGuest(); break;
     case 'auth-google-setup': { const p = $('#a-gsetup'); if (p) p.style.display = p.style.display==='none' ? 'block' : 'none'; break; }
     case 'auth-google-save': {
@@ -2712,23 +2718,40 @@ const sessionStore = {   // stay signed in across reloads; never let storage err
   clear(){ this._m = null; try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
 };
 
-function showAuth(msg){
+function showAuth(msg, startPane){
   const el = $('#auth-screen');
   el.style.display = 'flex';
-  const accounts = getAccounts();
   el.innerHTML = `
     <div class="auth-card">
       <div class="row" style="gap:10px;align-items:center">
         <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#5b7cfa,#a75bfa);display:grid;place-items:center;font-size:17px;font-weight:800;box-shadow:0 4px 18px rgba(108,140,255,.35)">Sβ</div>
-        <div><b style="font-size:18px">..STUDY BUDDYYY..</b><div class="sub" style="margin:0">by Sbeta — sign in to your study planner</div></div>
+        <div><b style="font-size:18px">..STUDY BUDDYYY..</b><div class="sub" style="margin:0">by Sbeta — your own private study planner</div></div>
       </div>
-      <div class="grid" style="gap:10px;margin-top:18px">
-        <label class="f">Email<input id="a-email" type="email" placeholder="you@example.com" autocomplete="username"></label>
-        <label class="f">Password<input id="a-pass" type="password" placeholder="••••••••" autocomplete="current-password"></label>
-        <label class="f" id="a-name-row" style="display:none">Your name<input id="a-name" placeholder="How should I greet you?"></label>
+      <div class="auth-tabs">
+        <button data-act="auth-tab" data-pane="signin">Sign in</button>
+        <button data-act="auth-tab" data-pane="signup">Create account</button>
       </div>
-      <div class="auth-err" id="a-err">${msg ? esc(msg) : ''}</div>
-      <button class="btn primary" data-act="auth-submit" id="a-submit" style="width:100%">Sign in</button>
+
+      <div id="a-pane-signin" style="display:flex;flex-direction:column">
+        <div class="grid" style="gap:10px">
+          <label class="f">Email<input id="a-email" type="email" placeholder="you@example.com" autocomplete="username"></label>
+          <label class="f">Password<input id="a-pass" type="password" placeholder="••••••••" autocomplete="current-password"></label>
+        </div>
+        <div class="auth-err" id="a-err">${msg ? esc(msg) : ''}</div>
+        <button class="btn primary" data-act="auth-submit" style="width:100%">Sign in</button>
+      </div>
+
+      <div id="a-pane-signup" style="display:none;flex-direction:column">
+        <div class="grid" style="gap:10px">
+          <label class="f">Your name<input id="s-name" placeholder="e.g. Yashwith" autocomplete="name"></label>
+          <label class="f">Email<input id="s-email" type="email" placeholder="you@example.com" autocomplete="username"></label>
+          <label class="f">Password<input id="s-pass" type="password" placeholder="at least 4 characters" autocomplete="new-password"></label>
+          <label class="f">Confirm password<input id="s-pass2" type="password" placeholder="repeat the password" autocomplete="new-password"></label>
+        </div>
+        <div class="auth-err" id="s-err"></div>
+        <button class="btn primary" data-act="auth-signup-submit" style="width:100%">Create&nbsp;account</button>
+      </div>
+
       <div class="row" style="justify-content:flex-end;margin-top:12px">
         <button class="btn ghost sm" data-act="auth-guest">Continue as guest →</button>
       </div>
@@ -2753,41 +2776,58 @@ function showAuth(msg){
           <button class="btn ghost sm" data-act="auth-google-remove">Remove saved ID</button>
         </div>         Google verifies your account; ..STUDY BUDDYYY.. stores only your name &amp; email on this device.
       </div>
-      <p class="sub" style="margin:12px 0 0;font-size:12px">Offline app — new email? An account is created automatically. Accounts &amp; data never leave this device.</p>
+      <p class="sub" style="margin:12px 0 0;font-size:12px">Each account keeps its own private data on this device. Nothing leaves the device — offline app.</p>
     </div>`;
-  const upd = () => {
-    const em = ($('#a-email').value||'').trim().toLowerCase();
-    const known = !!accounts[em];
-    $('#a-submit').textContent = known ? 'Sign in' : 'Create account';
-    $('#a-name-row').style.display = known ? 'none' : 'block';
-  };
-  $('#a-email').addEventListener('input', upd); upd();
-  ['#a-email','#a-pass','#a-name'].forEach(sel =>
-    $(sel)?.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); authSubmit(); } }));
+  ['#a-email','#a-pass'].forEach(sel =>
+    $(sel)?.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); authSignIn(); } }));
+  ['#s-name','#s-email','#s-pass','#s-pass2'].forEach(sel =>
+    $(sel)?.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); authSignUp(); } }));
   setTimeout(()=> $('#a-email')?.focus(), 60);
   initGoogleAuth();
+  if (startPane === 'signup') setActiveAuthPane('signup');
 }
-function authSubmit(){
+function setActiveAuthPane(pane){
+  const si = $('#a-pane-signin'), su = $('#a-pane-signup');
+  if (!si || !su) return;
+  si.style.display = pane === 'signup' ? 'none' : 'flex';
+  su.style.display = pane === 'signup' ? 'flex' : 'none';
+  $$('.auth-tabs button').forEach(b => b.classList.toggle('active', b.dataset.pane === pane));
+  (pane === 'signup' ? $('#s-name') : $('#a-email'))?.focus();
+}
+function authSignIn(){
   const email = ($('#a-email').value||'').trim().toLowerCase();
   const pass = $('#a-pass').value || '';
   const err = m => { $('#a-err').textContent = m; };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Enter a valid email address');
   if (pass.length < 4) return err('Password needs at least 4 characters');
   const accounts = getAccounts(); const rec = accounts[email];
-  let hash;
-  if (rec){
-    hash = rec.hash;
-    if (rec.hash !== pwHash(pass)) return err('Wrong password for this email');
-    user = { email, name: rec.name, since: rec.since };
-  } else {
-    hash = pwHash(pass);
-    const name = ($('#a-name').value||'').trim() || email.split('@')[0].replace(/[._\-].*/, '');
-    setAccount(email, { name, hash, since: Date.now() });
-    user = { email, name, since: Date.now() };
-  }
-  sessionStore.set({ email, hash });
+  if (!rec) return err('No account found for this email — switch to Create account');
+  if (rec.hash !== pwHash(pass)) return err('Wrong password for this email');
+  user = { email, name: rec.name, since: rec.since };
+  sessionStore.set({ email, hash: rec.hash });
   $('#auth-screen').style.display = 'none'; $('#auth-screen').innerHTML = '';
   startApp();
+}
+function authSignUp(){
+  const name = ($('#s-name').value||'').trim();
+  const email = ($('#s-email').value||'').trim().toLowerCase();
+  const pass = $('#s-pass').value || '';
+  const pass2 = $('#s-pass2').value || '';
+  const err = m => { $('#s-err').textContent = m; };
+  if (name.length < 2) return err('Enter your name (at least 2 characters)');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Enter a valid email address');
+  if (pass.length < 4) return err('Password needs at least 4 characters');
+  if (pass !== pass2) return err('Passwords do not match');
+  const accounts = getAccounts();
+  if (accounts[email]) return err('An account already exists for this email — switch to Sign in');
+  setAccount(email, { name, hash: pwHash(pass), since: Date.now() });
+  user = { email, name, since: Date.now() };
+  sessionStore.set({ email, hash: pwHash(pass) });
+  $('#auth-screen').style.display = 'none'; $('#auth-screen').innerHTML = '';
+  startApp();
+}
+function authSubmit(){   // legacy entry point — dispatch to whichever pane is active
+  if ($('#a-pane-signup')?.style.display !== 'none') authSignUp(); else authSignIn();
 }
 function authGuest(){
   user = null;
