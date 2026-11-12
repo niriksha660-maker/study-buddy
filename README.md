@@ -16,6 +16,7 @@ A **self-contained, offline-first study planner & doubt solver** in a *single HT
 - 🤖 **AI Coach** — goal tracking and study advice
 - 📲 **Installable PWA** — service worker + runtime-generated manifest, works offline after first visit
 - 💾 **Backup/restore** — one-click JSON backup download & restore (with auto-backup rescue)
+- 🔀 **Multi-tab safe** — edits in two open tabs are merged (revision stamps + three-way merge) instead of the last save silently overwriting the other
 
 ## Files
 | File | What it is |

@@ -397,7 +397,6 @@ function defaultState(){
   };
 }
 const dataKey = () => user ? `studybuddy.v1:u:${user.email}` : LS_KEY;
-function save(){ try { const s = JSON.stringify(state); localStorage.setItem(dataKey(), s); localStorage.setItem(dataKey()+':bak', s); } catch(e){ console.warn('save failed', e); } }
 function load(){
   try {
     const key = dataKey();
@@ -420,9 +419,161 @@ function load(){
     if (!raw) return null;
     const s = JSON.parse(raw);
     if (s.doubts) s.doubts = s.doubts.map(d => d.id ? d : Object.assign(d, { id: uid() })); // repair pre-fix doubts
-    return Object.assign(defaultState(), s);
+    const norm = Object.assign(defaultState(), s);
+    // remember which revision this tab is looking at + a snapshot to merge from
+    docRev = (readDocMeta(key) || {}).rev || 0;
+    docBase = clone(norm);
+    return norm;
   } catch(e){ return null; }
 }
+
+/* ============================================================
+   PERSISTENCE — revision stamps + three-way merge across tabs
+   ------------------------------------------------------------
+   Two open tabs used to overwrite each other: each kept its own
+   in-memory state and wrote the whole document, so whoever saved last
+   won and silently dropped the other tab's edits. Every save now
+   carries a revision number and a tab id. If the stored document has
+   moved on since this tab last read or wrote it, we merge instead of
+   clobbering: base = the snapshot we last saw, local = our in-memory
+   state, remote = what is on disk right now.
+   ============================================================ */
+const TAB_ID = uid();
+let docRev = 0;       // revision of the newest copy this tab has loaded or written
+let docBase = null;   // snapshot of the copy this tab last loaded/wrote (merge ancestor)
+let lastSyncAt = 0;
+const docMetaKey = key => key + ':meta';
+
+function clone(v){ try { return JSON.parse(JSON.stringify(v)); } catch(e){ return v; } }
+function isPlainObj(v){ return v !== null && typeof v === 'object' && !Array.isArray(v); }
+function hasId(x){ return isPlainObj(x) && typeof x.id === 'string' && x.id !== ''; }
+
+function deepEqual(a, b){
+  if (a === b) return true;
+  if (typeof a !== typeof b || a === null || b === null || typeof a !== 'object') return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) return a.length === b.length && a.every((x, i) => deepEqual(x, b[i]));
+  const ka = Object.keys(a), kb = Object.keys(b);
+  return ka.length === kb.length
+    && ka.every(k => Object.prototype.hasOwnProperty.call(b, k) && deepEqual(a[k], b[k]));
+}
+
+function readDocMeta(key){
+  try { const m = JSON.parse(localStorage.getItem(docMetaKey(key)) || 'null');
+    return (m && typeof m.rev === 'number') ? m : null; } catch(e){ return null; }
+}
+function readDocState(key){
+  try { const raw = localStorage.getItem(key);
+    if (!raw || raw === 'undefined' || raw === 'null') return null;
+    return JSON.parse(raw); } catch(e){ return null; }
+}
+
+function mergeState(base, local, remote){
+  const b = isPlainObj(base) ? base : {}, l = isPlainObj(local) ? local : {}, r = isPlainObj(remote) ? remote : {};
+  const out = {};
+  new Set([...Object.keys(r), ...Object.keys(l)]).forEach(k => {
+    const v = mergeValue(b[k], l[k], r[k]);
+    if (v !== undefined) out[k] = v;
+  });
+  return out;
+}
+
+function mergeValue(base, local, remote){
+  if (deepEqual(local, remote)) return local;    // same on both sides
+  if (deepEqual(local, base)) return remote;     // only the other tab changed it
+  if (deepEqual(remote, base)) return local;     // only this tab changed it
+  if (Array.isArray(local) && Array.isArray(remote)) return mergeArray(base, local, remote);
+  if (isPlainObj(local) && isPlainObj(remote)){
+    const b = isPlainObj(base) ? base : {};
+    const out = {};
+    new Set([...Object.keys(remote), ...Object.keys(local)]).forEach(k => {
+      const v = mergeValue(b[k], local[k], remote[k]);
+      if (v !== undefined) out[k] = v;
+    });
+    return out;
+  }
+  return local;                                  // both changed the same value — keep this tab's
+}
+
+function unionArrays(a, b){
+  const out = a.slice();
+  b.forEach(x => { if (!out.some(y => deepEqual(y, x))) out.push(x); });
+  return out;
+}
+
+function mergeArray(base, local, remote){
+  const b = Array.isArray(base) ? base : [];
+  if (b.some(hasId) || local.some(hasId) || remote.some(hasId)){
+    const map = arr => new Map(arr.filter(hasId).map(x => [x.id, x]));
+    const bM = map(b), lM = map(local), rM = map(remote);
+    const out = [], seen = new Set();
+    // remote order first (it saw the latest writes), then items only this tab has
+    [...remote.map(x => hasId(x) ? x.id : null), ...local.map(x => hasId(x) ? x.id : null)]
+      .filter(Boolean).forEach(id => {
+        if (seen.has(id)) return;
+        seen.add(id);
+        const bi = bM.get(id), li = lM.get(id), ri = rM.get(id);
+        if (li === undefined && ri === undefined) return;
+        if (ri === undefined){                    // gone remotely
+          if (li !== undefined && !(bi !== undefined && deepEqual(li, bi))) out.push(li); // keep our edit over their delete
+          return;
+        }
+        if (li === undefined){                    // deleted here
+          if (bi === undefined || !deepEqual(ri, bi)) out.push(ri); // keep their edit over our delete
+          return;
+        }
+        out.push(mergeValue(bi, li, ri));
+      });
+    // anything without an id is unioned so no entry disappears
+    return out.concat(unionArrays(remote.filter(x => !hasId(x)), local.filter(x => !hasId(x))));
+  }
+  return unionArrays(remote, local);              // un-keyed lists (chat log) — keep both sides
+}
+
+function syncToast(msg){
+  const now = Date.now();
+  if (now - lastSyncAt < 3000) return;
+  lastSyncAt = now;
+  toast(msg);
+}
+
+function save(){
+  const key = dataKey();
+  try {
+    const stored = readDocState(key);
+    const meta = readDocMeta(key);
+    const storedRev = (meta && meta.rev) || 0;
+    if (stored && docBase && meta && meta.tab !== TAB_ID && storedRev > docRev){
+      // another tab wrote while we were holding this state — merge, don't overwrite
+      state = Object.assign(defaultState(), mergeState(docBase, state, stored));
+      syncToast('🔀 Merged changes from another tab');
+    }
+    const s = JSON.stringify(state);
+    docRev = Math.max(docRev, storedRev) + 1;
+    localStorage.setItem(key, s);
+    localStorage.setItem(key + ':bak', s);
+    localStorage.setItem(docMetaKey(key), JSON.stringify({ rev: docRev, tab: TAB_ID, at: Date.now() }));
+    docBase = clone(state);
+  } catch(e){ console.warn('save failed', e); }
+}
+
+// another tab saved → fold its changes in live instead of waiting for a reload
+window.addEventListener('storage', e => {
+  if (!state) return;
+  const key = dataKey();
+  if (e.key !== key && e.key !== docMetaKey(key)) return;
+  const meta = readDocMeta(key);
+  if (!meta || meta.tab === TAB_ID || meta.rev <= docRev) return;
+  const stored = readDocState(key);
+  if (!stored) return;
+  state = Object.assign(defaultState(), mergeState(docBase, state, stored));
+  docRev = meta.rev;
+  docBase = clone(stored);
+  const ae = document.activeElement;
+  const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable);
+  if (!typing) render();   // don't yank the field a user is typing in
+  syncToast('🔀 Updated from another tab');
+});
 const subjById = id => state.subjects.find(s => s.id === id);
 const subjColor = s => s ? s.color : '#6c8cff';
 const topicProgress = s => { const n = s.topics.length; const d = s.topics.filter(t=>t.done).length; return {n, d, pct: n ? Math.round(d/n*100) : 0}; };
