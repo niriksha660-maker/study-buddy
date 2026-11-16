@@ -301,6 +301,10 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none
   .avatar{width:30px;height:30px;flex:none;border-radius:50%;background:var(--accent);color:#0b0f1a;display:grid;place-items:center;font-weight:800;font-size:13px}
   .uc-n{font-weight:700;font-size:12.5px;line-height:1.2}
   .uc-e{color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.code-badge{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;font-size:15px;font-weight:700;padding:8px 14px;border-radius:10px;border:1px dashed var(--border2);background:#121829;color:var(--text)}
+/* role-based access — mentor-only controls are hidden for student accounts */
+body[data-role="student"] [data-role="mentor"]{display:none!important}
+.role-pick.on{border-color:var(--accent);background:#1a2338;color:var(--text)}
 </style>
 </head>
 <body>
@@ -311,10 +315,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none
     <button class="nav-btn" data-act="nav" data-view="subjects"><span class="ico">📚</span>Subjects</button>
     <button class="nav-btn" data-act="nav" data-view="plan"><span class="ico">🗓️</span>Study Plan</button>
     <button class="nav-btn" data-act="nav" data-view="pomodoro"><span class="ico">⏱️</span>Focus Timer</button>
-    <button class="nav-btn" data-act="nav" data-view="flashcards"><span class="ico">🃏</span>Flashcards</button>
+    <button class="nav-btn" data-act="nav" data-view="flashcards" data-role="mentor"><span class="ico">🃏</span>Flashcards</button>
     <button class="nav-btn" data-act="nav" data-view="doubts"><span class="ico">🙋</span>Doubt Solver</button>
     <button class="nav-btn" data-act="nav" data-view="library"><span class="ico">🗂️</span>Notes &amp; Papers</button>
     <button class="nav-btn" data-act="nav" data-view="coach"><span class="ico">🤖</span>AI Coach</button>
+    <button class="nav-btn" data-act="nav" data-view="tests"><span class="ico">✍</span>Tests</button>
+    <button class="nav-btn" data-act="nav" data-view="mentor" data-role="mentor"><span class="ico">🧑‍🏫</span>Mentor</button>
+    <button class="nav-btn" data-act="nav" data-view="account"><span class="ico">👤</span>Account</button>
     <div class="side-foot" id="side-foot"></div>
   </aside>
   <div class="main">
@@ -334,6 +341,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none
       <section class="view-panel" data-panel="doubts" id="panel-doubts"></section>
       <section class="view-panel" data-panel="library" id="panel-library"></section>
       <section class="view-panel" data-panel="coach" id="panel-coach"></section>
+      <section class="view-panel" data-panel="mentor" id="panel-mentor"></section>
+      <section class="view-panel" data-panel="tests" id="panel-tests"></section>
+      <section class="view-panel" data-panel="account" id="panel-account"></section>
     </main>
   </div>
 </div>
@@ -360,7 +370,9 @@ const SESSION_KEY = 'studybuddy.session';
 const ACCOUNTS_KEY = 'studybuddy.accounts';
 const GOOGLE_ID_KEY = 'studybuddy.googleClientId';
 const DAY = 86400000;
-let user = null;               // signed-in profile {email, name, since} — null = guest
+let user = null;               // signed-in profile {email, name, role, since} — null = guest
+let signupRole = 'student';    // role chosen on the Create-account pane
+let pendingJoinCode = null;    // class code typed during sign-up, joined after boot
 
 function todayISO(d = new Date()){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -574,6 +586,750 @@ window.addEventListener('storage', e => {
   if (!typing) render();   // don't yank the field a user is typing in
   syncToast('🔀 Updated from another tab');
 });
+
+/* ============================================================
+   ROLES & CLASS WORKSPACE
+   ------------------------------------------------------------
+   An account is created as a Student or a Mentor.
+   A mentor account owns a class and a short class code
+   (SB-XXXXX). Students enter that code once and then see the
+   mentor's whole portal: assignments, notes & papers, the class
+   doubt board and tests. Everything lives in one class document
+   on this device — no searching for mentors or students, and no
+   way to land in the wrong role's screens.
+   ============================================================ */
+const ROLE_LABEL = { student:'Student', mentor:'Mentor' };
+const ROLE_ICON  = { student:'🧑‍🎓', mentor:'🧑‍🏫' };
+function currentRole(){ return (user && user.role === 'mentor') ? 'mentor' : 'student'; }
+function isMentor(){ return currentRole() === 'mentor'; }
+function roleName(){ return ROLE_LABEL[currentRole()]; }
+// access matrix — which role may open which view
+const VIEW_ROLE = { mentor:'mentor', flashcards:'mentor' };
+function viewAllowed(v){ return !VIEW_ROLE[v] || VIEW_ROLE[v] === currentRole(); }
+const MENTOR_ONLY_ACTS = new Set([
+  'class-assign','class-assign-del','class-member-del','class-note-open','class-note-save','class-note-del',
+  'class-doubt-answer','test-open','test-create','test-q-open','test-q-save','test-publish','test-del',
+  'class-code-copy','class-code-new'
+]);
+const STUDENT_ONLY_ACTS = new Set(['class-join','class-assign-done','test-submit']);
+
+/* ---------- the class document (one per mentor code) ---------- */
+const CLASS_PREFIX = 'studybuddy.class.';
+const classKey = code => CLASS_PREFIX + code;
+let cls = null, clsCode = null, clsRev = 0, clsBase = null;
+function defaultClass(code){
+  return { meta:{ code, name:'My class', mentor:'', createdAt:Date.now() },
+    members:[], assignments:[], done:[], notes:[], doubts:[], tests:[], submissions:[], activity:[] };
+}
+const CLASS_LISTS = ['members','assignments','done','notes','doubts','tests','submissions','activity'];
+function activeClassCode(){ return (user && user.classCode) || null; }
+function loadClass(){
+  clsCode = activeClassCode();
+  if (!clsCode){ cls = null; clsRev = 0; clsBase = null; return; }
+  const key = classKey(clsCode);
+  cls = Object.assign(defaultClass(clsCode), readDocState(key) || {});
+  CLASS_LISTS.forEach(k => { cls[k] = cls[k] || []; });
+  clsBase = clone(cls);
+  clsRev = (readDocMeta(key) || {}).rev || 0;
+}
+function saveClass(){
+  if (!cls || !clsCode) return;
+  const key = classKey(clsCode);
+  try {
+    const stored = readDocState(key), meta = readDocMeta(key), rev = (meta && meta.rev) || 0;
+    if (stored && clsBase && meta && meta.tab !== TAB_ID && rev > clsRev)
+      cls = Object.assign(defaultClass(clsCode), mergeState(clsBase, cls, stored));
+    const s = JSON.stringify(cls);
+    clsRev = Math.max(clsRev, rev) + 1;
+    localStorage.setItem(key, s);
+    localStorage.setItem(key + ':bak', s);
+    localStorage.setItem(docMetaKey(key), JSON.stringify({ rev:clsRev, tab:TAB_ID, at:Date.now() }));
+    clsBase = clone(cls);
+  } catch(e){ console.warn('class save failed', e); }
+}
+const myEmail = () => ((user && user.email) || '').toLowerCase();
+const sameEmail = (a,b) => String(a || '').toLowerCase() === String(b || '').toLowerCase();
+function makeClassCode(){
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let c = '';
+  for (let i=0;i<5;i++) c += A[Math.floor(Math.random()*A.length)];
+  return 'SB-' + c;
+}
+function ensureMentorClass(){
+  if (!isMentor() || !user || !user.email) return;
+  if (!user.classCode){
+    let code = makeClassCode();
+    while (readDocState(classKey(code))) code = makeClassCode();
+    const fresh = defaultClass(code);
+    fresh.meta.mentor = user.name;
+    const rec = getAccounts()[user.email];
+    if (rec){ rec.classCode = code; setAccount(user.email, rec); }
+    user.classCode = code;
+    localStorage.setItem(classKey(code), JSON.stringify(fresh));
+    localStorage.setItem(docMetaKey(classKey(code)), JSON.stringify({ rev:1, tab:TAB_ID, at:Date.now() }));
+    clsCode = code; cls = clone(fresh); clsBase = clone(fresh); clsRev = 1;
+  }
+  loadClass();
+}
+function joinClass(raw){
+  if (!user || !user.email){ toast('Sign in with an account to join a class'); return false; }
+  if (isMentor()){ toast('Your mentor account already runs its own class'); return false; }
+  const code = String(raw || '').trim().toUpperCase();
+  if (code.length < 4){ toast('Enter the class code your mentor shared'); return false; }
+  if (!readDocState(classKey(code))){ toast('No class found for that code on this device'); return false; }
+  const rec = getAccounts()[user.email];
+  if (rec){ rec.classCode = code; setAccount(user.email, rec); }
+  user.classCode = code;
+  loadClass();
+  if (!cls.members.some(m => sameEmail(m.email, user.email))){
+    cls.members.push({ id: uid(), name: user.name, email: myEmail(), joinedAt: Date.now() });
+    logActivity('join', `${user.name} joined the class`);
+    saveClass();
+  }
+  toast(`Joined ${cls.meta.name || 'the class'} ✓`);
+  render();
+  return true;
+}
+function leaveClass(){
+  if (!cls || !user) return;
+  if (isMentor()) return;
+  cls.members = cls.members.filter(m => !sameEmail(m.email, user.email));
+  logActivity('leave', `${user.name} left the class`);
+  saveClass();
+  const rec = getAccounts()[user.email];
+  if (rec){ delete rec.classCode; setAccount(user.email, rec); }
+  user.classCode = null;
+  loadClass();
+  render();
+  toast('Left the class');
+}
+function logActivity(kind, text, who){
+  if (!cls) return;
+  cls.activity.unshift({ id: uid(), kind, text,
+    name: (who && who.name) || (user && user.name) || 'Someone',
+    email: (who && who.email) || myEmail(), at: Date.now() });
+  cls.activity = cls.activity.slice(0, 80);
+}
+/* ---------- class reads ---------- */
+function classMember(){ return cls ? cls.members.find(m => sameEmail(m.email, myEmail())) : null; }
+function classReady(){ return !!(cls && clsCode && user && user.classCode && (isMentor() || classMember())); }
+function classAssignments(){
+  return (cls ? cls.assignments.slice() : []).sort((a,b) => String(a.due || '9999').localeCompare(String(b.due || '9999')));
+}
+function assignmentDoneMine(a){ return !!(cls && cls.done.some(d => d.assignmentId === a.id && sameEmail(d.email, myEmail()))); }
+function assignmentDoneCount(a){ return cls ? cls.done.filter(d => d.assignmentId === a.id).length : 0; }
+function assignmentDoneNames(a){
+  if (!cls) return '';
+  return cls.done.filter(d => d.assignmentId === a.id).map(d => d.name).join(', ');
+}
+function classTests(){ return (cls ? cls.tests.slice() : []).sort((a,b) => (b.at || 0) - (a.at || 0)); }
+function mySubmission(testId){ return cls ? cls.submissions.find(s => s.testId === testId && sameEmail(s.email, myEmail())) : null; }
+function classNotes(){ return (cls ? cls.notes.slice() : []).sort((a,b) => (b.at || 0) - (a.at || 0)); }
+function classDoubts(){ return (cls ? cls.doubts.slice() : []).sort((a,b) => (b.at || 0) - (a.at || 0)); }
+function classSubjects(){
+  if (!cls) return [];
+  const map = new Map();
+  const add = (name, kind) => {
+    const key = (String(name || 'General').trim() || 'General');
+    if (!map.has(key)) map.set(key, { name:key, assignments:0, tests:0, notes:0 });
+    if (kind) map.get(key)[kind]++;
+  };
+  cls.assignments.forEach(a => add(a.subject, 'assignments'));
+  cls.tests.forEach(t => add(t.subject, 'tests'));
+  cls.notes.forEach(n => add(n.subject, 'notes'));
+  return [...map.values()];
+}
+function testTotal(t){ return (t.questions || []).reduce((sum,q) => sum + (+q.marks || 1), 0); }
+function testMarksFor(t){ const sub = mySubmission(t.id); return sub ? `${sub.score}/${sub.total}` : '—'; }
+
+/* ---------- shared UI atoms ---------- */
+function activityHtml(limit){
+  const list = (cls && cls.activity || []).slice(0, limit || 8);
+  if (!list.length) return '<p class="sub" style="margin:4px 0">Nothing yet. Student joins, assignment ticks, doubts and test submissions appear here.</p>';
+  const icon = { join:'👋', leave:'🚪', assign:'📌', done:'✅', test:'✍', doubt:'💬', answer:'🧑‍🏫', note:'🗂' };
+  return `<div class="list">${list.map(a => `<div class="item">
+    <span>${icon[a.kind] || '•'}</span>
+    <div class="grow"><div class="title">${esc(a.text)}</div>
+      <div class="uc-e">${esc(a.name || '')} · ${timeAgo(a.at || Date.now())}</div></div>
+  </div>`).join('')}</div>`;
+}
+function codeBadge(){
+  return `<span class="code-badge">${esc((cls && cls.meta.code) || '—')}</span>
+    <button class="btn sm" data-act="class-code-copy">Copy code</button>`;
+}
+function joinClassCard(){
+  return `<div class="card" style="margin-top:16px">
+    <div class="row wrap" style="align-items:center;gap:8px">
+      <div class="grow"><h2 style="margin:0">🔑 Join your mentor's class</h2>
+        <p class="sub" style="margin:4px 0 0">Ask your mentor for their class code (looks like <b>SB-7K2QF</b>). Enter it once — their assignments, papers, doubt board and tests appear here.</p></div>
+    </div>
+    <div class="row wrap" style="gap:6px;margin-top:10px">
+      <input id="join-code" placeholder="SB-XXXXX" maxlength="10" style="flex:1;min-width:150px;text-transform:uppercase;letter-spacing:.14em">
+      <button class="btn primary" data-act="class-join">Join class</button>
+    </div>
+  </div>`;
+}
+function classAssignmentsCard(){
+  if (!classReady()) return joinClassCard();
+  const list = classAssignments();
+  const open = list.filter(a => !assignmentDoneMine(a)).length;
+  const todo = classTests().filter(t => t.published && !mySubmission(t.id)).length;
+  const notes = classNotes().length;
+  return `<div class="card" style="margin-top:16px">
+    <div class="row wrap" style="align-items:center;gap:8px">
+      <div class="grow"><h2 style="margin:0">🧑‍🏫 ${esc(cls.meta.name || 'Your class')}</h2>
+        <div class="uc-e">${esc(cls.meta.mentor || 'Mentor')} · ${cls.members.length} student${cls.members.length===1?'':'s'} · code ${esc(cls.meta.code)}</div></div>
+      <span class="pill ${open ? 'warn' : 'good'}">${open ? open + ' task' + (open===1?'':'s') + ' open' : 'all tasks done'}</span>
+    </div>
+    <div class="list" style="margin-top:10px">
+      ${list.length ? list.map(a => `<div class="item ${assignmentDoneMine(a)?'done':''}">
+        <button class="iconbtn" data-act="class-assign-done" data-id="${a.id}" title="Mark done">${assignmentDoneMine(a)?'✅':'◻️'}</button>
+        <div class="grow"><div class="title">${esc(a.title)}</div>
+          <div class="uc-e">${a.subject ? esc(a.subject) + ' · ' : ''}${a.due ? 'due ' + fmtDay(a.due) : 'no due date'} · ${a.minutes}m</div></div>
+      </div>`).join('') : '<p class="sub" style="margin:4px 0">No assignments from your mentor yet.</p>'}
+    </div>
+    <div class="row wrap" style="gap:6px;margin-top:10px">
+      ${todo ? `<button class="btn sm" data-act="nav" data-view="tests">✍ ${todo} test${todo===1?'':'s'} to take</button>` : ''}
+      ${notes ? `<button class="btn sm ghost" data-act="nav" data-view="library">🗂️ ${notes} mentor paper${notes===1?'':'s'}</button>` : ''}
+      <button class="btn sm ghost" data-act="nav" data-view="doubts">💬 Class doubts</button>
+    </div>
+  </div>`;
+}
+
+/* ---------- mentor dashboard ---------- */
+function renderMentorDashboard(){
+  if (!cls) ensureMentorClass();
+  if (!cls){ $('#panel-dashboard').innerHTML = '<div class="card"><h2>Mentor dashboard</h2><p class="sub">Sign in with an email account to create your class code.</p></div>'; return; }
+  const assignments = classAssignments();
+  const tests = classTests();
+  const subs = cls.submissions;
+  const avg = subs.length
+    ? Math.round(subs.reduce((a,s) => a + (s.total ? s.score / s.total * 100 : 0), 0) / subs.length)
+    : null;
+  const subjects = classSubjects();
+  const open = assignments.filter(a => assignmentDoneCount(a) < cls.members.length).length;
+  $('#panel-dashboard').innerHTML = `
+    <div class="card hero">
+      <div class="row wrap" style="align-items:center;gap:10px">
+        <div class="grow">
+          <h2 style="font-size:18px">🧑‍🏫 Mentor dashboard</h2>
+          <p class="sub" style="margin:6px 0 0">Share this code with your students once — they enter it and see the entire portal you publish here.</p>
+        </div>
+        <div class="row wrap" style="gap:6px;align-items:center;justify-content:flex-end">${codeBadge()}</div>
+      </div>
+    </div>
+
+    <div class="grid g4" style="margin-top:16px">
+      <div class="stat"><div class="k">Students</div><div class="v">${cls.members.length}</div><div class="s">joined with your code</div></div>
+      <div class="stat"><div class="k">Open work</div><div class="v">${open}</div><div class="s">${assignments.length} assignment${assignments.length===1?'':'s'} given</div></div>
+      <div class="stat"><div class="k">Tests</div><div class="v">${tests.filter(t=>t.published).length}</div><div class="s">${subs.length} submission${subs.length===1?'':'s'}</div></div>
+      <div class="stat"><div class="k">Class average</div><div class="v">${avg===null?'—':avg+'%'}</div><div class="s">across all tests</div></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Your subjects</h2>
+      <div class="grid g3" style="margin-top:8px">
+        ${subjects.length ? subjects.map(s => `<div class="stat" style="background:#121829">
+          <div class="k">${esc(s.name)}</div>
+          <div class="v" style="font-size:16px">${s.assignments} work · ${s.tests} tests</div>
+          <div class="s">${s.notes} paper${s.notes===1?'':'s'} shared</div>
+        </div>`).join('') : `<p class="sub" style="margin:0">No subjects yet — the subjects on your assignments, tests and papers show up here.</p>`}
+      </div>
+    </div>
+
+    <div class="grid g2" style="margin-top:16px;gap:16px">
+      <div class="card">
+        <div class="row wrap" style="align-items:center"><h2 class="grow" style="margin:0">Assigned work</h2>
+          <button class="btn sm ghost" data-act="nav" data-view="mentor">Manage</button></div>
+        <div class="list" style="margin-top:8px">
+          ${assignments.length ? assignments.slice(0,6).map(a => `<div class="item">
+            <span>📌</span>
+            <div class="grow"><div class="title">${esc(a.title)}</div>
+              <div class="uc-e">${a.subject ? esc(a.subject) + ' · ' : ''}${a.due ? 'due ' + fmtDay(a.due) : 'no due date'}</div></div>
+            <span class="tag">${assignmentDoneCount(a)}/${cls.members.length}</span>
+          </div>`).join('') : '<p class="sub" style="margin:4px 0">Nothing assigned yet.</p>'}
+        </div>
+        <div class="row wrap" style="gap:6px;margin-top:10px">
+          <input id="ca-title" placeholder="Assignment title" style="flex:2;min-width:150px">
+          <input id="ca-subject" placeholder="Subject" style="flex:1;min-width:100px">
+          <input id="ca-due" type="date" style="flex:none">
+          <button class="btn sm primary" data-act="class-assign">Assign</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="row wrap" style="align-items:center"><h2 class="grow" style="margin:0">Recent updates</h2>
+          <button class="btn sm ghost" data-act="nav" data-view="mentor">Class hub</button></div>
+        <div style="margin-top:6px">${activityHtml(7)}</div>
+      </div>
+    </div>`;
+}
+
+/* ---------- mentor class hub (nav "Mentor") ---------- */
+function renderMentor(){
+  const p = $('#panel-mentor'); if (!p) return;
+  if (!isMentor()){
+    p.innerHTML = `<div class="card"><h2>Mentor workspace</h2>
+      <p class="sub">This area is for mentor accounts. You are signed in as a ${roleName()}.</p></div>`;
+    return;
+  }
+  if (!cls) ensureMentorClass();
+  if (!cls){ p.innerHTML = '<div class="card"><h2>Class hub</h2><p class="sub">A mentor account with an email can create a class.</p></div>'; return; }
+  const assignments = classAssignments();
+  p.innerHTML = `
+    <div class="card hero">
+      <div class="row wrap" style="align-items:center;gap:10px">
+        <div class="grow"><h2 style="font-size:18px">🧑‍🏫 Class hub</h2>
+          <p class="sub" style="margin:6px 0 0">Everyone who joins with this code sees your assignments, papers, doubt answers and tests. Their progress shows below.</p></div>
+        <div class="row wrap" style="gap:6px;align-items:center">${codeBadge()}</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="row wrap" style="align-items:center;gap:8px">
+        <h2 class="grow" style="margin:0">Assign work</h2>
+        <span class="tag">${cls.members.length} student${cls.members.length===1?'':'s'}</span>
+      </div>
+      <div class="row wrap" style="gap:6px;margin-top:8px">
+        <input id="ca-title" placeholder="e.g. Finish the integration problem set" style="flex:2;min-width:200px">
+        <input id="ca-subject" placeholder="Subject" style="flex:1;min-width:110px">
+        <input id="ca-due" type="date" style="flex:none">
+        <input id="ca-min" type="number" min="5" step="5" value="30" style="width:80px" title="Minutes">
+        <button class="btn primary" data-act="class-assign">Assign to class</button>
+      </div>
+      <div class="list" style="margin-top:12px">
+        ${assignments.length ? assignments.map(a => `<div class="item">
+          <span>📌</span>
+          <div class="grow"><div class="title">${esc(a.title)}</div>
+            <div class="uc-e">${a.subject ? esc(a.subject) + ' · ' : ''}${a.due ? 'due ' + fmtDay(a.due) : 'no due date'} · ${a.minutes}m${assignmentDoneNames(a) ? ' · done by ' + esc(assignmentDoneNames(a)) : ''}</div></div>
+          <span class="tag">${assignmentDoneCount(a)}/${cls.members.length}</span>
+          <button class="iconbtn" data-act="class-assign-del" data-id="${a.id}" title="Delete assignment">✕</button>
+        </div>`).join('') : '<p class="sub" style="margin:4px 0">No work assigned yet.</p>'}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Students with your code</h2>
+      <div class="list" style="margin-top:8px">
+        ${cls.members.length ? cls.members.map(m => `<div class="item">
+          <span>${ROLE_ICON.student}</span>
+          <div class="grow"><div class="title">${esc(m.name)}</div>
+            <div class="uc-e">${esc(m.email)} · joined ${timeAgo(m.joinedAt || Date.now())}</div></div>
+          <span class="tag">${cls.submissions.filter(s => sameEmail(s.email, m.email)).length} tests</span>
+          <button class="iconbtn" data-act="class-member-del" data-id="${m.id}" title="Remove from class">🗑</button>
+        </div>`).join('') : `<p class="sub" style="margin:4px 0">No students yet. Share the code and they join instantly.</p>`}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="row wrap" style="align-items:center"><h2 class="grow" style="margin:0">Activity</h2>
+        <button class="btn sm ghost" data-act="nav" data-view="tests">Tests &amp; marks</button></div>
+      <div style="margin-top:6px">${activityHtml(20)}</div>
+    </div>`;
+}
+
+/* ---------- tests portal ---------- */
+function renderTests(){
+  const p = $('#panel-tests'); if (!p) return;
+  if (!isMentor()){
+    if (!classReady()){
+      p.innerHTML = `<div class="card"><h2>Tests</h2><p class="sub">Join your mentor's class with their code to see tests here.</p>${joinClassCard()}</div>`;
+      return;
+    }
+    const list = classTests().filter(t => t.published);
+    p.innerHTML = `
+      <div class="row" style="margin-bottom:16px">
+        <div class="grow"><h2 style="margin:0;font-size:16px">Tests</h2>
+          <p class="sub" style="margin:2px 0 0">Tests set by your mentor. Answers are marked automatically the moment you submit.</p></div>
+      </div>
+      ${list.length ? list.map(t => testCardStudent(t)).join('') : `<div class="card"><div class="empty"><div class="big">✍</div>No tests published yet.<br>Your mentor's tests will appear here.</div></div>`}`;
+    return;
+  }
+  if (!cls) ensureMentorClass();
+  const list = classTests();
+  p.innerHTML = `
+    <div class="row" style="margin-bottom:16px">
+      <div class="grow"><h2 style="margin:0;font-size:16px">Test portal</h2>
+        <p class="sub" style="margin:2px 0 0">Build a test here, publish it, and marks land in your dashboard as students submit.</p></div>
+      <button class="btn primary" data-act="test-open">＋ New test</button>
+    </div>
+    ${list.length ? list.map(t => testCardMentor(t)).join('') : `<div class="card"><div class="empty"><div class="big">📝</div>No tests yet.<br>Create one and add questions — students take it from their Tests tab.</div></div>`}`;
+}
+function testCardMentor(t){
+  const qs = t.questions || [];
+  const subs = cls.submissions.filter(s => s.testId === t.id);
+  const total = testTotal(t);
+  return `<div class="card" style="margin-top:12px">
+    <div class="row wrap" style="align-items:center;gap:8px">
+      <div class="grow"><b>${esc(t.title)}</b>${t.subject ? ` <span class="tag">${esc(t.subject)}</span>` : ''}
+        <div class="uc-e">${qs.length} question${qs.length===1?'':'s'} · ${total} mark${total===1?'':'s'}${t.due ? ' · due ' + fmtDay(t.due) : ''} · ${subs.length} submission${subs.length===1?'':'s'}</div></div>
+      <span class="pill ${t.published ? 'good' : 'warn'}">${t.published ? 'published' : 'draft'}</span>
+      <button class="btn sm ghost" data-act="test-q-open" data-id="${t.id}">＋ Question</button>
+      <button class="btn sm ${t.published ? 'ghost' : 'primary'}" data-act="test-publish" data-id="${t.id}">${t.published ? 'Unpublish' : 'Publish'}</button>
+      <button class="btn sm danger" data-act="test-del" data-id="${t.id}">✕</button>
+    </div>
+    ${qs.length ? `<div class="list" style="margin-top:8px">${qs.map((q,i) => `<div class="item">
+      <span>${i+1}.</span><div class="grow"><div class="title">${esc(q.text)}</div>
+        <div class="uc-e">${(q.options||[]).map((o,oi) => (oi === +q.correct ? '✓ ' : '') + esc(o)).join(' · ')}</div></div>
+      <span class="tag">${q.marks || 1}m</span></div>`).join('')}</div>` : '<p class="sub" style="margin:6px 0">No questions yet — add at least one before publishing.</p>'}
+    ${subs.length ? `<div class="card" style="margin-top:10px;background:#121829">
+      <div class="k" style="color:var(--muted);font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Marks</div>
+      <div class="list" style="margin-top:6px">${subs.sort((a,b) => b.score - a.score).map(s => `<div class="item">
+        <span>${ROLE_ICON.student}</span><div class="grow"><div class="title">${esc(s.name)}</div>
+        <div class="uc-e">${timeAgo(s.at || Date.now())}</div></div>
+        <span class="tag">${s.score}/${s.total}</span></div>`).join('')}</div>
+    </div>` : ''}
+  </div>`;
+}
+function testCardStudent(t){
+  const sub = mySubmission(t.id);
+  const qs = t.questions || [];
+  const total = testTotal(t);
+  if (sub){
+    const pct = total ? Math.round(sub.score / sub.total * 100) : 0;
+    return `<div class="card" style="margin-top:12px">
+      <div class="row wrap" style="align-items:center;gap:8px">
+        <div class="grow"><b>${esc(t.title)}</b>${t.subject ? ` <span class="tag">${esc(t.subject)}</span>` : ''}
+          <div class="uc-e">submitted ${timeAgo(sub.at || Date.now())}</div></div>
+        <span class="pill ${pct >= 50 ? 'good' : 'warn'}">${sub.score}/${sub.total} · ${pct}%</span>
+      </div>
+    </div>`;
+  }
+  return `<div class="card" style="margin-top:12px">
+    <div class="row wrap" style="align-items:center;gap:8px">
+      <div class="grow"><b>${esc(t.title)}</b>${t.subject ? ` <span class="tag">${esc(t.subject)}</span>` : ''}
+        <div class="uc-e">${qs.length} question${qs.length===1?'':'s'} · ${total} mark${total===1?'':'s'}${t.due ? ' · due ' + fmtDay(t.due) : ''}</div></div>
+    </div>
+    <div style="margin-top:10px">
+      ${qs.map((q,i) => `<div style="margin-top:10px">
+        <div style="font-weight:600">${i+1}. ${esc(q.text)} <span class="tag">${q.marks || 1}m</span></div>
+        <div class="row wrap" style="gap:12px;margin-top:6px">
+          ${(q.options||[]).map((o,oi) => `<label class="row" style="gap:6px;align-items:center;cursor:pointer">
+            <input type="radio" name="ans-${t.id}-${q.id}" value="${oi}"> <span>${esc(o)}</span></label>`).join('')}
+        </div>
+      </div>`).join('')}
+    </div>
+    <div class="row wrap" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn primary" data-act="test-submit" data-id="${t.id}">Submit test</button>
+    </div>
+  </div>`;
+}
+function testCreateModal(){
+  openModal(`<h3>New test</h3>
+    <p class="sub" style="margin:4px 0 0">It stays a draft until you publish it — students only see published tests.</p>
+    <div class="grid" style="gap:10px;margin-top:12px">
+      <label class="f">Title<input id="t-title" placeholder="Unit 3 — Integration"></label>
+      <label class="f">Subject<input id="t-subject" placeholder="Maths"></label>
+      <label class="f">Due date<input id="t-due" type="date"></label>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn ghost" data-act="modal-close">Cancel</button>
+      <button class="btn primary" data-act="test-create">Create test</button>
+    </div>`);
+}
+function testQuestionModal(tid){
+  const t = cls && cls.tests.find(x => x.id === tid); if (!t) return;
+  openModal(`<h3>Add question — ${esc(t.title)}</h3>
+    <div class="grid" style="gap:10px;margin-top:12px">
+      <label class="f">Question<input id="q-text" placeholder="What is the derivative of x²?"></label>
+      ${[1,2,3,4].map(n => `<label class="f">Option ${n}<input id="q-o${n}" placeholder="Option ${n}"></label>`).join('')}
+      <label class="f">Correct option
+        <select id="q-correct"><option value="1">Option 1</option><option value="2">Option 2</option><option value="3">Option 3</option><option value="4">Option 4</option></select></label>
+      <label class="f">Marks<input id="q-marks" type="number" min="1" max="20" value="1"></label>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn ghost" data-act="modal-close">Done</button>
+      <button class="btn primary" data-act="test-q-save" data-id="${tid}">Add question</button>
+    </div>`);
+}
+function testCreate(){
+  const title = ($('#t-title')?.value || '').trim();
+  if (!title){ toast('Give the test a title'); return; }
+  cls.tests.push({ id: uid(), title, subject: ($('#t-subject')?.value || '').trim() || 'General',
+    due: $('#t-due')?.value || null, published:false, at: Date.now(), by: (user && user.name) || 'Mentor', questions: [] });
+  saveClass(); closeModal(); renderTests(); toast('Test created — add its questions');
+}
+function testAddQuestion(tid){
+  const t = cls && cls.tests.find(x => x.id === tid); if (!t) return;
+  const text = ($('#q-text')?.value || '').trim();
+  const options = [1,2,3,4].map(n => ($('#q-o' + n)?.value || '').trim()).filter(Boolean);
+  if (!text || options.length < 2){ toast('Add the question and at least two options'); return; }
+  t.questions = t.questions || [];
+  t.questions.push({ id: uid(), text, options, correct: clamp(+($('#q-correct')?.value) || 1, 1, options.length) - 1, marks: clamp(+($('#q-marks')?.value) || 1, 1, 20) });
+  saveClass(); closeModal(); renderTests(); toast('Question added ✓');
+}
+function submitTest(tid){
+  const t = cls && cls.tests.find(x => x.id === tid); if (!t) return;
+  if (!t.published){ toast('That test is not published yet'); return; }
+  if (mySubmission(tid)){ toast('You already submitted this test'); return; }
+  if (!classReady()){ toast('Join the class first'); return; }
+  const answers = {}; let score = 0, total = 0, answered = 0;
+  (t.questions || []).forEach(q => {
+    total += (+q.marks || 1);
+    const sel = document.querySelector(`input[name="ans-${tid}-${q.id}"]:checked`);
+    if (sel){ answers[q.id] = +sel.value; answered++; if (+sel.value === +q.correct) score += (+q.marks || 1); }
+  });
+  if (!answered){ toast('Answer at least one question'); return; }
+  cls.submissions.push({ id: uid(), testId: tid, email: myEmail(), name: (user && user.name) || 'Student', answers, score, total, at: Date.now() });
+  logActivity('test', `${(user && user.name) || 'A student'} submitted "${t.title}" — ${score}/${total}`);
+  saveClass(); renderTests(); toast(`Submitted — ${score}/${total} ✓`);
+}
+
+/* ---------- class notes & papers (inside Library) ---------- */
+function classLibraryHtml(){
+  if (!user || !user.classCode) return isMentor() ? '' : joinClassCard();
+  if (!classReady()) return '';
+  const items = classNotes();
+  return `<div class="card" style="margin-bottom:16px">
+    <div class="row wrap" style="align-items:center;gap:8px">
+      <div class="grow"><h2 style="margin:0;font-size:15px">🗂  ${esc(cls.meta.name || 'Class')} — papers &amp; notes</h2>
+        <div class="uc-e">${isMentor() ? 'Publish important questions and papers here; every student with your code sees them.' : 'Published by ' + esc(cls.meta.mentor || 'your mentor') + ' — read only.'}</div></div>
+      ${isMentor() ? '<button class="btn sm primary" data-act="class-note-open">＋ Add paper / notes</button>' : ''}
+    </div>
+    ${items.length ? `<div class="list" style="margin-top:10px">${items.map(n => `<div class="item" style="align-items:flex-start">
+      <span>${n.kind === 'paper' ? '📄' : n.kind === 'questions' ? '❓' : '📝'}</span>
+      <div class="grow"><div class="title">${esc(n.title)}</div>
+        <div class="uc-e">${esc(n.subject || 'General')} · ${timeAgo(n.at || Date.now())}</div>
+        ${n.body ? `<div class="sub" style="white-space:pre-wrap;margin-top:6px;max-height:180px;overflow:auto">${esc(n.body)}</div>` : ''}</div>
+      <button class="btn sm ghost" data-act="class-note-copy" data-id="${n.id}">Copy</button>
+      ${isMentor() ? `<button class="btn sm danger" data-act="class-note-del" data-id="${n.id}">✕</button>` : ''}
+    </div>`).join('')}</div>` : '<p class="sub" style="margin:8px 0 0">Nothing published yet.</p>'}
+  </div>`;
+}
+function classNoteModal(){
+  openModal(`<h3>Add to the class library</h3>
+    <div class="grid" style="gap:10px;margin-top:12px">
+      <label class="f">Title<input id="cn-title" placeholder="Important questions — Unit 3"></label>
+      <label class="f">Subject<input id="cn-subject" placeholder="Maths"></label>
+      <label class="f">Type<select id="cn-kind"><option value="note">📝 Notes</option><option value="paper">📄 Previous paper</option><option value="questions">❓ Important questions</option></select></label>
+      <label class="f">Content<textarea id="cn-body" rows="8" placeholder="Paste the notes, paper or question list here"></textarea></label>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px">
+      <button class="btn ghost" data-act="modal-close">Cancel</button>
+      <button class="btn primary" data-act="class-note-save">Publish to class</button>
+    </div>`);
+}
+
+/* ---------- class doubt board (inside Doubt Solver) ---------- */
+function classBoardHtml(){
+  if (!user || !user.classCode) return '';
+  if (!classReady()) return '';
+  const list = classDoubts().slice(0, 8);
+  return `<div class="card" style="margin-bottom:16px">
+    <div class="row wrap" style="align-items:center;gap:8px">
+      <div class="grow"><h2 style="margin:0;font-size:15px">💬 Class doubt board</h2>
+        <div class="uc-e">${isMentor() ? 'Questions from your students — answer them here.' : 'Ask your mentor directly; answers stay on this board.'}</div></div>
+    </div>
+    <div class="row wrap" style="gap:6px;margin-top:10px">
+      <input id="cd-q" placeholder="${isMentor() ? 'Post an announcement or question for the class…' : 'Type your doubt…'}" style="flex:2;min-width:200px">
+      <button class="btn primary" data-act="class-doubt-add">Post</button>
+    </div>
+    <div class="list" style="margin-top:10px">
+      ${list.length ? list.map(d => `<div class="item" style="align-items:flex-start">
+        <span>${d.solved ? '✅' : '❓'}</span>
+        <div class="grow"><div class="title">${esc(d.q)}</div>
+          <div class="uc-e">${esc(d.name || 'Student')} · ${timeAgo(d.at || Date.now())}</div>
+          ${d.answer ? `<div class="sub" style="margin-top:6px;padding-left:8px;border-left:2px solid var(--accent)"><b>${esc(d.answeredBy || 'Mentor')}:</b> ${esc(d.answer)}</div>` : ''}
+          ${isMentor() ? `<div class="row wrap" style="gap:6px;margin-top:6px">
+            <input id="cd-a-${d.id}" placeholder="Answer…" style="flex:1;min-width:160px" value="${esc(d.answer || '')}">
+            <button class="btn sm primary" data-act="class-doubt-answer" data-id="${d.id}">${d.answer ? 'Update' : 'Answer'}</button>
+          </div>` : ''}
+        </div>
+      </div>`).join('') : '<p class="sub" style="margin:8px 0 0">No class doubts yet.</p>'}
+    </div>
+  </div>`;
+}
+
+/* ---------- mentor AI coach extra card ---------- */
+function mentorCoachCard(){
+  if (!isMentor() || !cls) return '';
+  const subs = cls.submissions;
+  const avg = subs.length ? Math.round(subs.reduce((a,s) => a + (s.total ? s.score / s.total * 100 : 0), 0) / subs.length) : null;
+  return `<div class="card" style="margin-bottom:16px">
+    <h2 style="margin:0;font-size:15px">🧑‍🏫 Class coaching</h2>
+    <p class="sub" style="margin:6px 0 0">${cls.members.length} student${cls.members.length===1?'':'s'} · ${classAssignments().length} assignments · ${classTests().filter(t=>t.published).length} live tests · ${avg===null ? 'no marks yet' : avg + '% class average'}. Ask below about pacing, revision or which subject needs attention.</p>
+  </div>`;
+}
+
+/* ---------- one place for every class action ---------- */
+function handleClassAction(act, el, id){
+  switch(act){
+    case 'class-join': joinClass($('#join-code')?.value); return true;
+    case 'class-assign': {
+      if (!cls) return true;
+      const title = ($('#ca-title')?.value || '').trim();
+      if (!title){ toast('Give the work a title'); return true; }
+      cls.assignments.push({ id: uid(), title,
+        subject: ($('#ca-subject')?.value || '').trim() || 'General',
+        due: $('#ca-due')?.value || null,
+        minutes: clamp(+($('#ca-min')?.value) || 30, 5, 600),
+        at: Date.now(), by: (user && user.name) || 'Mentor' });
+      logActivity('assign', `New work assigned: ${title}`);
+      saveClass(); render(); toast('Assigned to the class ✓');
+      return true;
+    }
+    case 'class-assign-del': {
+      if (!cls) return true;
+      cls.assignments = cls.assignments.filter(a => a.id !== id);
+      cls.done = cls.done.filter(d => d.assignmentId !== id);
+      saveClass(); render(); return true;
+    }
+    case 'class-assign-done': {
+      if (!cls) return true;
+      const a = cls.assignments.find(x => x.id === id); if (!a || !classReady()) return true;
+      const mine = cls.done.find(d => d.assignmentId === id && sameEmail(d.email, myEmail()));
+      if (mine){ cls.done = cls.done.filter(d => d !== mine); logActivity('done', `${user.name} reopened "${a.title}"`); }
+      else { cls.done.push({ id: uid(), assignmentId: id, email: myEmail(), name: (user && user.name) || 'Student', at: Date.now() }); logActivity('done', `${user.name} finished "${a.title}"`); }
+      saveClass(); render(); return true;
+    }
+    case 'class-member-del': {
+      if (!cls) return true;
+      const m = cls.members.find(x => x.id === id); if (!m) return true;
+      if (!confirm(`Remove ${m.name} from the class?`)) return true;
+      cls.members = cls.members.filter(x => x.id !== id);
+      saveClass(); render(); toast('Removed from the class'); return true;
+    }
+    case 'class-code-copy': {
+      const code = cls && cls.meta.code;
+      if (!code) return true;
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(code).then(() => toast('Class code copied ✓'), () => toast(code));
+      else toast(code);
+      return true;
+    }
+    case 'class-note-open': classNoteModal(); return true;
+    case 'class-note-save': {
+      if (!cls) return true;
+      const title = ($('#cn-title')?.value || '').trim();
+      if (!title){ toast('Give it a title'); return true; }
+      const body = ($('#cn-body')?.value || '').trim();
+      cls.notes.push({ id: uid(), title, subject: ($('#cn-subject')?.value || '').trim() || 'General',
+        kind: $('#cn-kind')?.value || 'note', body, at: Date.now(), by: (user && user.name) || 'Mentor' });
+      logActivity('note', `Published "${title}" to the class library`);
+      saveClass(); closeModal(); render(); toast('Published to the class ✓'); return true;
+    }
+    case 'class-note-del': {
+      if (!cls) return true;
+      cls.notes = cls.notes.filter(n => n.id !== id);
+      saveClass(); render(); return true;
+    }
+    case 'class-note-copy': {
+      const n = cls && cls.notes.find(x => x.id === id); if (!n) return true;
+      const txt = `${n.title}\n\n${n.body || ''}`;
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(txt).then(() => toast('Copied ✓'), () => toast('Copy failed'));
+      else toast('Copy not supported here');
+      return true;
+    }
+    case 'class-doubt-add': {
+      if (!cls) return true;
+      const q = ($('#cd-q')?.value || '').trim();
+      if (!q){ toast('Type your doubt first'); return true; }
+      cls.doubts.push({ id: uid(), q, name: (user && user.name) || 'Student', email: myEmail(),
+        mentor: isMentor(), at: Date.now(), answer:'', answeredBy:'', solved:false });
+      logActivity('doubt', `${(user && user.name) || 'Someone'} posted a class doubt`);
+      saveClass(); render(); toast('Posted to the class board ✓'); return true;
+    }
+    case 'class-doubt-answer': {
+      if (!cls) return true;
+      const d = cls.doubts.find(x => x.id === id); if (!d) return true;
+      const answer = ($('#cd-a-' + id)?.value || '').trim();
+      if (!answer){ toast('Write the answer first'); return true; }
+      d.answer = answer; d.answeredBy = (user && user.name) || 'Mentor'; d.solved = true;
+      logActivity('answer', `Answered a class doubt`);
+      saveClass(); render(); toast('Answer posted ✓'); return true;
+    }
+    case 'test-open': testCreateModal(); return true;
+    case 'test-create': testCreate(); return true;
+    case 'test-q-open': testQuestionModal(id); return true;
+    case 'test-q-save': testAddQuestion(id); return true;
+    case 'test-publish': {
+      const t = cls && cls.tests.find(x => x.id === id); if (!t) return true;
+      if (!t.published && !(t.questions || []).length){ toast('Add at least one question first'); return true; }
+      t.published = !t.published;
+      saveClass(); renderTests(); toast(t.published ? 'Published — students can take it now' : 'Back to draft'); return true;
+    }
+    case 'test-del': {
+      if (!cls) return true;
+      cls.tests = cls.tests.filter(t => t.id !== id);
+      cls.submissions = cls.submissions.filter(s => s.testId !== id);
+      saveClass(); renderTests(); return true;
+    }
+    case 'test-submit': submitTest(id); return true;
+  }
+  return false;
+}
+
+// another tab changed the class document → fold it in
+window.addEventListener('storage', e => {
+  if (!cls || !clsCode) return;
+  const key = classKey(clsCode);
+  if (e.key !== key && e.key !== docMetaKey(key)) return;
+  const meta = readDocMeta(key);
+  if (!meta || meta.tab === TAB_ID || meta.rev <= clsRev) return;
+  const stored = readDocState(key);
+  if (!stored) return;
+  cls = Object.assign(defaultClass(clsCode), mergeState(clsBase, cls, stored));
+  clsRev = meta.rev;
+  clsBase = clone(stored);
+  const v = currentView();
+  if (v === 'mentor') renderMentor();
+  else if (v === 'tests') renderTests();
+  else if (v === 'dashboard') renderDashboard();
+  else if (v === 'library' || v === 'doubts' || v === 'coach') render();
+  syncToast('🔀 Class updated from another tab');
+});
+
+/* ---------- account page ---------- */
+function renderAccount(){
+  const p = $('#panel-account'); if (!p) return;
+  const email = (user && user.email) || '';
+  const googleId = (() => { try { return localStorage.getItem(GOOGLE_ID_KEY) || ''; } catch(e){ return ''; } })();
+  const rec = email ? getAccounts()[email] : null;
+  const googleLinked = !!(rec && (rec.googleSub || rec.hash.startsWith('google:')));
+  p.innerHTML = `
+    <div class="card">
+      <div class="row wrap" style="align-items:center;gap:12px">
+        <span class="avatar" style="width:52px;height:52px;font-size:20px">${esc(((user && user.name) || 'G')[0].toUpperCase())}</span>
+        <div class="grow">
+          <h2 style="margin:0">${esc((user && user.name) || 'Guest')}</h2>
+          <div class="uc-e">${email ? esc(email) : 'no account — guest mode'}</div>
+        </div>
+        <span class="pill">${ROLE_ICON[currentRole()]} ${roleName()}</span>
+      </div>
+      <div class="grid g2" style="margin-top:16px;gap:10px">
+        <div class="stat"><div class="k">Sign-in method</div><div class="v" style="font-size:15px">${googleLinked ? 'Google account' : (email ? 'Email & password' : 'Guest')}</div><div class="s">${googleLinked ? 'linked on this device' : email ? 'local account' : 'data stays on this device'}</div></div>
+        <div class="stat"><div class="k">Class</div><div class="v" style="font-size:15px">${user && user.classCode ? esc(user.classCode) : '—'}</div><div class="s">${isMentor() ? 'your students join with this code' : (user && user.classCode ? 'joined' : 'ask your mentor for a code')}</div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Google account</h2>
+      <p class="sub" style="margin:6px 0 0">${googleLinked ? 'This account signs in with Google. You can still use email sign-in with the same address.' : 'Create or link a Google account so you can sign in with one tap next time.'}</p>
+      <div id="acct-g-btn" style="display:flex;justify-content:flex-start;margin-top:10px;min-height:40px"></div>
+      ${googleId ? `<div class="row" style="justify-content:flex-start;margin-top:8px"><button class="btn ghost sm" data-act="account-google-forget">Remove saved Google Client ID</button></div>`
+        : `<div class="sub" style="font-size:12.5px;line-height:1.6;margin-top:8px;color:var(--muted)">Needs a free Google OAuth Client ID: console.cloud.google.com → Credentials → OAuth client ID → Web application, with <code>${esc(location.origin)}</code> as an authorised origin. Then add it from the sign-in page setup.</div>`}
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Role</h2>
+      <p class="sub" style="margin:6px 0 8px">Student gets the planner plus everything your mentor publishes. Mentor unlocks the class code, flashcards and the test portal.</p>
+      <div class="row wrap" style="gap:8px">
+        <button class="btn ${isMentor() ? 'ghost' : 'primary'}" data-act="role-switch" data-role="student">${ROLE_ICON.student} Use as Student</button>
+        <button class="btn ${isMentor() ? 'primary' : 'ghost'}" data-act="role-switch" data-role="mentor">${ROLE_ICON.mentor} Use as Mentor</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Your data</h2>
+      <div class="row wrap" style="gap:8px;margin-top:8px">
+        <button class="btn sm" data-act="backup-download">⬇ Backup</button>
+        <button class="btn sm ghost" data-act="backup-restore">⬆ Restore</button>
+        <button class="btn sm ghost" data-act="pwa-install">📲 Install app</button>
+        ${!isMentor() && user && user.classCode ? '<button class="btn sm danger" data-act="class-leave">Leave class</button>' : ''}
+        <button class="btn sm danger" data-act="account-logout">⏻ Sign out</button>
+      </div>
+    </div>`;
+  initGoogleAuthInto('#acct-g-btn');
+}
+
 const subjById = id => state.subjects.find(s => s.id === id);
 const subjColor = s => s ? s.color : '#6c8cff';
 const topicProgress = s => { const n = s.topics.length; const d = s.topics.filter(t=>t.done).length; return {n, d, pct: n ? Math.round(d/n*100) : 0}; };
@@ -623,10 +1379,12 @@ document.addEventListener('keydown', e => {
 
 const VIEW_TITLES = { dashboard:'Dashboard', subjects:'Subjects & Syllabus', plan:'Study Plan',
   pomodoro:'Focus Timer', flashcards:'Flashcards — Active Recall',  doubts:'Doubt Solver',
-  library:'Notes & Previous Papers', coach:'AI Study Coach' };
+  library:'Notes & Previous Papers', coach:'AI Study Coach', mentor:'Mentor Workspace',
+  tests:'Tests & Marks', account:'Account' };
 
 /* ---------- navigation ---------- */
 function setView(v){
+  if (!viewAllowed(v)){ toast(v === 'flashcards' ? 'Flashcards are mentor-only in this build' : 'That area is for mentor accounts'); return; }
   $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
   $$('.view-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === v));
   $('#topbar-title').textContent = VIEW_TITLES[v] || v;
@@ -658,7 +1416,7 @@ function renderPills(){
   $('#side-foot').innerHTML = `
     <div class="user-chip">
       <span class="avatar">${esc((uname[0]||'G').toUpperCase())}</span>
-      <div style="min-width:0;flex:1"><div class="uc-n">${esc(uname)}</div><div class="uc-e">${esc(uemail)}</div></div>
+      <div style="min-width:0;flex:1"><div class="uc-n">${esc(uname)}</div><div class="uc-e">${ROLE_ICON[currentRole()]} ${roleName()} · ${esc(uemail)}</div></div>
       <button class="iconbtn" data-act="pwa-install" title="Install as an app on this phone (home-screen icon)">📲</button>
       <button class="iconbtn" data-act="backup-download" title="Download a backup of all your data">⬇</button>
       <button class="iconbtn" data-act="backup-restore" title="Restore data from a backup file">⬆</button>
@@ -674,6 +1432,7 @@ function renderPills(){
    DASHBOARD
    ============================================================ */
 function renderDashboard(){
+  if (isMentor()){ renderMentorDashboard(); return; }
   const t = todayISO();
   const todays = state.tasks.filter(x => x.date === t).sort((a,b)=> a.done - b.done);
   const studied = studiedOn(t);
@@ -702,6 +1461,8 @@ function renderDashboard(){
       <div class="stat"><div class="k">Cards due</div><div class="v">${due}</div><div class="s">active recall</div></div>
       <div class="stat"><div class="k">Streak</div><div class="v">${streakDays()}d</div><div class="s">keep it alive 🔥</div></div>
     </div>
+
+    ${classAssignmentsCard()}
 
     <div style="margin-top:16px">
       <div>
@@ -1220,6 +1981,11 @@ function renderPomodoro(){
 let study = null; // {deckId, queue:[cardIds], idx, seen, right}
 
 function renderFlashcards(){
+  if (!viewAllowed('flashcards')){
+    $('#panel-flashcards').innerHTML = `<div class="card"><h2>Flashcards</h2>
+      <p class="sub">Flashcards are part of the mentor workspace in this build. Students get the planner, the class portal and tests.</p></div>`;
+    return;
+  }
   const p = $('#panel-flashcards');
   const dueByDeck = id => { const d = state.decks.find(x=>x.id===id); const now=Date.now();
     return d ? d.cards.filter(c=>new Date(c.due).getTime()<=now).length : 0; };
@@ -1851,6 +2617,7 @@ function renderDoubts(){
         <p class="sub" style="margin:2px 0 0">A WhatsApp-style class chat for every doubt — pick who's in, then message, send photos from the camera, create polls and react.</p></div>
       <button class="btn primary" data-act="add-doubt-modal">＋ Ask a doubt</button>
     </div>
+    ${classBoardHtml()}
     ${dbTabBar()}
     <div style="margin-bottom:14px"><input id="db-search" data-act="db-search" placeholder="Search your doubts…" value="${esc(dbFilter.q||'')}" style="width:100%"></div>
     <input id="db-msgfile" type="file" accept="image/*" style="display:none">
@@ -2252,6 +3019,7 @@ function suggestGoals(){
 function renderCoach(){
   const p = $('#panel-coach');
   p.innerHTML = `
+    ${mentorCoachCard()}
     <div class="chat-wrap card">
       <div class="row wrap" style="margin-bottom:8px">
         <div class="grow"><h2 style="margin:0">🤖 AI Study Coach</h2>
@@ -2539,6 +3307,9 @@ document.addEventListener('click', e => {
   if (!el) return;
   const act = el.dataset.act;
   const id = el.dataset.id;
+  if (MENTOR_ONLY_ACTS.has(act) && !isMentor()){ toast('That action is for mentor accounts'); return; }
+  if (STUDENT_ONLY_ACTS.has(act) && isMentor()){ toast('That action is for student accounts'); return; }
+  if (handleClassAction(act, el, id)) return;
   switch(act){
     // tasks
     case 'toggle-task': { const t = state.tasks.find(x=>x.id===id); if (t){ t.done = !t.done; save(); render(); } break; }
@@ -2560,7 +3331,7 @@ document.addEventListener('click', e => {
       setView('pomodoro'); pomoStart(); break; }
     case 'start-recommended': {
       if (!state.subjects.length){ setView('subjects'); break; }
-      if (cardsDueCount()){ const first = dueCountBySubject()[0]; if (first){ startStudy(first.deck.id, true); toast('Clearing recall backlog first 🧠'); break; } }
+      if (isMentor() && cardsDueCount()){ const first = dueCountBySubject()[0]; if (first){ startStudy(first.deck.id, true); toast('Clearing recall backlog first 🧠'); break; } }
       const ctx = coachContext(); const s = ctx.subjects[0]; const topic = nextTopic(s);
       if (!topic){ setView('flashcards'); break; }
       state.tasks.push({ id:uid(), subjectId:s.id, title:`Study: ${topic.name}`, date:todayISO(), minutes:state.settings.focusMin, done:false, source:'manual', topicId:topic.id });
@@ -2709,6 +3480,20 @@ document.addEventListener('click', e => {
     // auth
     case 'logout': doLogout(); break;
     case 'auth-tab': setActiveAuthPane(el.dataset.pane); break;
+    case 'auth-page': showAuth(null, el.dataset.page); break;
+    case 'account-logout': doLogout(); break;
+    case 'role-switch': setRole(el.dataset.role); break;
+    case 'class-leave': if (confirm('Leave this class? Your own study data stays.')) leaveClass(); break;
+    case 'account-google-forget': {
+      try { localStorage.removeItem(GOOGLE_ID_KEY); } catch(e){}
+      toast('Saved Google Client ID removed'); renderAccount(); break; }
+    case 'role-pick': {
+      signupRole = el.dataset.role === 'mentor' ? 'mentor' : 'student';
+      $$('.role-pick').forEach(b => {
+        const on = b.dataset.role === signupRole;
+        b.classList.toggle('on', on); b.classList.toggle('ghost', !on);
+      });
+      break; }
     case 'auth-submit': authSubmit(); break;
     case 'auth-signup-submit': authSignUp(); break;
     case 'auth-guest': authGuest(); break;
@@ -3006,21 +3791,45 @@ const sessionStore = {   // stay signed in across reloads; never let storage err
   clear(){ this._m = null; try { localStorage.removeItem(SESSION_KEY); } catch(e){} }
 };
 
-function showAuth(msg, startPane){
+function showAuth(msg, page){
+  page = page === 'signup' ? 'signup' : page === 'signedout' ? 'signedout' : 'signin';
+  signupRole = 'student';
   const el = $('#auth-screen');
   el.style.display = 'flex';
+
+  if (page === 'signedout'){
+    el.innerHTML = `
+      <div class="auth-card" style="text-align:center">
+        <div style="width:52px;height:52px;border-radius:14px;margin:0 auto 12px;background:linear-gradient(135deg,#5b7cfa,#a75bfa);display:grid;place-items:center;font-weight:800;font-size:19px;box-shadow:0 4px 18px rgba(108,140,255,.35)">Sβ</div>
+        <h2 style="margin:0;font-size:19px">You're signed out</h2>
+        <p class="sub" style="margin:8px 0 0">Everything you saved is still on this device. Sign back in any time.</p>
+        <div class="row" style="gap:8px;justify-content:center;margin-top:18px">
+          <button class="btn primary" data-act="auth-page" data-page="signin">Sign in</button>
+          <button class="btn" data-act="auth-page" data-page="signup">Create account</button>
+        </div>
+        <div class="row" style="justify-content:center;margin-top:10px">
+          <button class="btn ghost sm" data-act="auth-guest">Continue as guest →</button>
+        </div>
+        <p class="sub" style="margin:16px 0 0;font-size:12px">Signed out on ${esc(new Date().toLocaleString())}</p>
+      </div>`;
+    return;
+  }
+
+  const signup = page === 'signup';
   el.innerHTML = `
     <div class="auth-card">
       <div class="row" style="gap:10px;align-items:center">
         <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#5b7cfa,#a75bfa);display:grid;place-items:center;font-size:17px;font-weight:800;box-shadow:0 4px 18px rgba(108,140,255,.35)">Sβ</div>
-        <div><b style="font-size:18px">..STUDY BUDDYYY..</b><div class="sub" style="margin:0">by Sbeta — your own private study planner</div></div>
-      </div>
-      <div class="auth-tabs">
-        <button data-act="auth-tab" data-pane="signin">Sign in</button>
-        <button data-act="auth-tab" data-pane="signup">Create account</button>
+        <div><b style="font-size:18px">..STUDY BUDDYYY..</b><div class="sub" style="margin:0">by Sbeta — planner, class portal and tests</div></div>
       </div>
 
-      <div id="a-pane-signin" style="display:flex;flex-direction:column">
+      <div class="auth-tabs">
+        <button data-act="auth-page" data-page="signin" class="${signup?'':'active'}">Sign in</button>
+        <button data-act="auth-page" data-page="signup" class="${signup?'active':''}">Create account</button>
+      </div>
+
+      <div id="a-pane-signin" style="display:${signup?'none':'flex'};flex-direction:column">
+        <h2 style="font-size:15px;margin:0 0 10px">Sign in to your account</h2>
         <div class="grid" style="gap:10px">
           <label class="f">Email<input id="a-email" type="email" placeholder="you@example.com" autocomplete="username"></label>
           <label class="f">Password<input id="a-pass" type="password" placeholder="••••••••" autocomplete="current-password"></label>
@@ -3029,12 +3838,22 @@ function showAuth(msg, startPane){
         <button class="btn primary" data-act="auth-submit" style="width:100%">Sign in</button>
       </div>
 
-      <div id="a-pane-signup" style="display:none;flex-direction:column">
+      <div id="a-pane-signup" style="display:${signup?'flex':'none'};flex-direction:column">
+        <h2 style="font-size:15px;margin:0 0 10px">Create your account</h2>
         <div class="grid" style="gap:10px">
           <label class="f">Your name<input id="s-name" placeholder="e.g. Yashwith" autocomplete="name"></label>
           <label class="f">Email<input id="s-email" type="email" placeholder="you@example.com" autocomplete="username"></label>
           <label class="f">Password<input id="s-pass" type="password" placeholder="at least 4 characters" autocomplete="new-password"></label>
           <label class="f">Confirm password<input id="s-pass2" type="password" placeholder="repeat the password" autocomplete="new-password"></label>
+          <div class="f">I am joining as
+            <div class="row" style="gap:8px;margin-top:6px">
+              <button type="button" class="btn sm role-pick on" data-act="role-pick" data-role="student">🧑‍🎓 Student</button>
+              <button type="button" class="btn sm ghost role-pick" data-act="role-pick" data-role="mentor">🧑‍🏫 Mentor</button>
+            </div>
+            <div class="sub" style="font-size:12px;margin-top:6px">Students get the planner plus everything their mentor publishes. Mentors get a class code, flashcards and the test portal.</div>
+          </div>
+          <label class="f">Class code <span class="sub" style="font-weight:400">(students — optional, you can add it later)</span>
+            <input id="s-code" placeholder="SB-XXXXX" maxlength="10" autocomplete="off" style="text-transform:uppercase;letter-spacing:.14em"></label>
         </div>
         <div class="auth-err" id="s-err"></div>
         <button class="btn primary" data-act="auth-signup-submit" style="width:100%">Create&nbsp;account</button>
@@ -3054,7 +3873,7 @@ function showAuth(msg, startPane){
         <b>One-time setup (free):</b><br>
         1. Open <b>console.cloud.google.com</b> → APIs &amp; Services → Credentials<br>
         2. Create Credentials → <b>OAuth client ID</b> → Web application<br>
-        3. Add this Authorized JavaScript origin: <code id="a-origin" style="color:var(--amber)">${location.origin}</code><br>
+        3. Add this Authorized JavaScript origin: <code style="color:var(--amber)">${esc(location.origin)}</code><br>
         4. Paste your Client ID below:
         <div class="row" style="gap:6px;margin-top:6px">
           <input id="a-gid" placeholder="…apps.googleusercontent.com" style="flex:1">
@@ -3062,56 +3881,54 @@ function showAuth(msg, startPane){
         </div>
         <div class="row" style="justify-content:flex-end;margin-top:6px">
           <button class="btn ghost sm" data-act="auth-google-remove">Remove saved ID</button>
-        </div>         Google verifies your account; ..STUDY BUDDYYY.. stores only your name &amp; email on this device.
+        </div>
+        Google verifies your account; ..STUDY BUDDYYY.. stores only your name &amp; email on this device.
       </div>
-      <p class="sub" style="margin:12px 0 0;font-size:12px">Each account keeps its own private data on this device. Nothing leaves the device — offline app.</p>
+      <p class="sub" style="margin:12px 0 0;font-size:12px">Each account keeps its own private data on this device. Signing in with Google creates the account on first use.</p>
     </div>`;
+
   ['#a-email','#a-pass'].forEach(sel =>
     $(sel)?.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); authSignIn(); } }));
-  ['#s-name','#s-email','#s-pass','#s-pass2'].forEach(sel =>
+  ['#s-name','#s-email','#s-pass','#s-pass2','#s-code'].forEach(sel =>
     $(sel)?.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); authSignUp(); } }));
-  setTimeout(()=> $('#a-email')?.focus(), 60);
   initGoogleAuth();
-  if (startPane === 'signup') setActiveAuthPane('signup');
+  setTimeout(()=> $(signup ? '#s-name' : '#a-email')?.focus(), 60);
 }
-function setActiveAuthPane(pane){
-  const si = $('#a-pane-signin'), su = $('#a-pane-signup');
-  if (!si || !su) return;
-  si.style.display = pane === 'signup' ? 'none' : 'flex';
-  su.style.display = pane === 'signup' ? 'flex' : 'none';
-  $$('.auth-tabs button').forEach(b => b.classList.toggle('active', b.dataset.pane === pane));
-  (pane === 'signup' ? $('#s-name') : $('#a-email'))?.focus();
-}
+function setActiveAuthPane(pane){ showAuth(null, pane === 'signup' ? 'signup' : 'signin'); }
+function authScreenHide(){ $('#auth-screen').style.display = 'none'; $('#auth-screen').innerHTML = ''; }
 function authSignIn(){
-  const email = ($('#a-email').value||'').trim().toLowerCase();
-  const pass = $('#a-pass').value || '';
-  const err = m => { $('#a-err').textContent = m; };
+  const email = ($('#a-email')?.value || '').trim().toLowerCase();
+  const pass = $('#a-pass')?.value || '';
+  const err = m => { const e = $('#a-err'); if (e) e.textContent = m; };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Enter a valid email address');
   if (pass.length < 4) return err('Password needs at least 4 characters');
-  const accounts = getAccounts(); const rec = accounts[email];
+  const rec = getAccounts()[email];
   if (!rec) return err('No account found for this email — switch to Create account');
   if (rec.hash !== pwHash(pass)) return err('Wrong password for this email');
-  user = { email, name: rec.name, since: rec.since };
-  sessionStore.set({ email, hash: rec.hash });
-  $('#auth-screen').style.display = 'none'; $('#auth-screen').innerHTML = '';
+  user = { email, name: rec.name, role: rec.role === 'mentor' ? 'mentor' : 'student',
+    classCode: rec.classCode || null, since: rec.since };
+  sessionStore.set({ email, hash: rec.hash, role: user.role });
+  authScreenHide();
   startApp();
 }
 function authSignUp(){
-  const name = ($('#s-name').value||'').trim();
-  const email = ($('#s-email').value||'').trim().toLowerCase();
-  const pass = $('#s-pass').value || '';
-  const pass2 = $('#s-pass2').value || '';
-  const err = m => { $('#s-err').textContent = m; };
+  const name = ($('#s-name')?.value || '').trim();
+  const email = ($('#s-email')?.value || '').trim().toLowerCase();
+  const pass = $('#s-pass')?.value || '';
+  const pass2 = $('#s-pass2')?.value || '';
+  const code = ($('#s-code')?.value || '').trim().toUpperCase();
+  const err = m => { const e = $('#s-err'); if (e) e.textContent = m; };
   if (name.length < 2) return err('Enter your name (at least 2 characters)');
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return err('Enter a valid email address');
   if (pass.length < 4) return err('Password needs at least 4 characters');
   if (pass !== pass2) return err('Passwords do not match');
-  const accounts = getAccounts();
-  if (accounts[email]) return err('An account already exists for this email — switch to Sign in');
-  setAccount(email, { name, hash: pwHash(pass), since: Date.now() });
-  user = { email, name, since: Date.now() };
-  sessionStore.set({ email, hash: pwHash(pass) });
-  $('#auth-screen').style.display = 'none'; $('#auth-screen').innerHTML = '';
+  if (getAccounts()[email]) return err('An account already exists for this email — switch to Sign in');
+  const role = signupRole === 'mentor' ? 'mentor' : 'student';
+  setAccount(email, { name, hash: pwHash(pass), role, since: Date.now() });
+  user = { email, name, role, classCode: null, since: Date.now() };
+  sessionStore.set({ email, hash: pwHash(pass), role });
+  if (role === 'student' && code) pendingJoinCode = code;
+  authScreenHide();
   startApp();
 }
 function authSubmit(){   // legacy entry point — dispatch to whichever pane is active
@@ -3120,14 +3937,31 @@ function authSubmit(){   // legacy entry point — dispatch to whichever pane is
 function authGuest(){
   user = null;
   sessionStore.set({ guest:true });
-  $('#auth-screen').style.display = 'none'; $('#auth-screen').innerHTML = '';
+  authScreenHide();
   startApp();
 }
 function doLogout(){
   if (state) save();
   sessionStore.clear();
   user = null; state = null;
-  showAuth();
+  cls = null; clsCode = null; clsBase = null;
+  document.body.dataset.role = 'student';
+  showAuth(null, 'signedout');
+}
+function setRole(role){
+  if (!user || !user.email){ toast('Sign in with an account to switch role'); return; }
+  const r = role === 'mentor' ? 'mentor' : 'student';
+  const rec = getAccounts()[user.email];
+  if (rec){ rec.role = r; setAccount(user.email, rec); }
+  user.role = r;
+  const sess = sessionStore.get() || {};
+  sessionStore.set(Object.assign({}, sess, { role: r }));
+  document.body.dataset.role = r;
+  if (r === 'mentor') ensureMentorClass();
+  loadClass();
+  renderPills();
+  setView('account');
+  toast(`This account now uses the ${ROLE_LABEL[r]} role`);
 }
 
 /* ---------- Google sign-in (needs a free OAuth Client ID) ---------- */
@@ -3139,10 +3973,13 @@ function googleDecodeJwt(t){
   } catch(e){ return null; }
 }
 let _gsiLoading = false;
-function initGoogleAuth(){
+function initGoogleAuthInto(sel){
   let cid = ''; try { cid = localStorage.getItem(GOOGLE_ID_KEY) || ''; } catch(e){}
-  const box = $('#g-btn'); if (!box) return;
-  if (!cid){ box.innerHTML = '<span class="sub" style="font-size:12px">Google button appears here once a Client ID is saved below.</span>'; return; }
+  const box = $(sel); if (!box) return;
+  if (!cid){
+    box.innerHTML = `<button class="btn" data-act="auth-google-setup" style="width:100%;max-width:320px">Continue with Google</button>`;
+    return;
+  }
   box.innerHTML = '<span class="sub" style="font-size:12px">Loading Google sign-in…</span>';
   const setup = () => {
     try {
@@ -3159,20 +3996,24 @@ function initGoogleAuth(){
   sc.onerror = () => { _gsiLoading = false; box.innerHTML = '<span class="sub" style="font-size:12px">Couldn\'t reach Google right now — email sign-in still works.</span>'; };
   document.head.appendChild(sc);
 }
+function initGoogleAuth(){ initGoogleAuthInto('#g-btn'); }
 function handleGoogleCredential(res){
   const p = googleDecodeJwt(res?.credential || '');
   if (!p || !p.email) return authErr('Google sign-in failed — no email in the response');
   const email = String(p.email).toLowerCase();
   const accounts = getAccounts(); let rec = accounts[email];
   if (!rec){
-    rec = { name: p.name || email.split('@')[0], hash: 'google:' + p.sub, since: Date.now(), googleSub: p.sub };
+    // first Google sign-in creates the account — honour the role picked on the form
+    rec = { name: p.name || email.split('@')[0], hash: 'google:' + p.sub, googleSub: p.sub,
+      role: signupRole === 'mentor' ? 'mentor' : 'student', since: Date.now() };
     setAccount(email, rec);
   } else if (!rec.googleSub){
     rec.googleSub = p.sub; setAccount(email, rec);   // link Google to the existing local account
   }
-  user = { email, name: rec.name, since: rec.since };
-  sessionStore.set({ email, hash: rec.hash, google:true });
-  $('#auth-screen').style.display = 'none'; $('#auth-screen').innerHTML = '';
+  user = { email, name: rec.name, role: rec.role === 'mentor' ? 'mentor' : 'student',
+    classCode: rec.classCode || null, since: rec.since };
+  sessionStore.set({ email, hash: rec.hash, role: user.role, google:true });
+  authScreenHide();
   startApp();
 }
 
@@ -3195,6 +4036,7 @@ function renderLibrary(){
         <p class="sub" style="margin:2px 0 0">Your exam bank — paste important notes, question papers and solutions. Update them anytime.</p></div>
       <button class="btn primary" data-act="add-library">＋ Add note / paper</button>
     </div>
+    ${classLibraryHtml()}
     <div class="row wrap" style="gap:6px;margin-bottom:14px">
       ${kindBtn('all','All')}${kindBtn('note','📝 Notes')}${kindBtn('paper','📄 Papers')}
       <span style="width:10px"></span>
@@ -3279,9 +4121,18 @@ function render(){
   else if (v==='doubts') renderDoubts();
   else if (v==='library') renderLibrary();
   else if (v==='coach') renderCoach();
+  else if (v==='mentor') renderMentor();
+  else if (v==='tests') renderTests();
+  else if (v==='account') renderAccount();
 }
 
 function startApp(){
+  document.body.dataset.role = currentRole();
+  if (isMentor()) ensureMentorClass();   // a mentor always owns a class + code
+  loadClass();
+  // always open on the dashboard of the role that just signed in
+  $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === 'dashboard'));
+  $$('.view-panel').forEach(p => p.classList.toggle('active', p.dataset.panel === 'dashboard'));
   state = load();
   if (!state){ state = defaultState(); save(); }
   // resume a running timer after reload
@@ -3292,6 +4143,8 @@ function startApp(){
     state.pomo.remainingMs = pomoDuration(state.pomo.mode); save();
   }
   render();
+  // a class code typed at sign-up joins once the app is up
+  if (pendingJoinCode){ const code = pendingJoinCode; pendingJoinCode = null; joinClass(code); }
   // once-per-day notification about today's tasks
   if (state.settings.lastTaskNotify !== todayISO()){ state.settings.lastTaskNotify = todayISO(); save(); setTimeout(notifyTasksToday, 1200); }
 }
@@ -3383,7 +4236,11 @@ async function pwaInstall(){
   if (sess && sess.guest){ user = null; startApp(); return; }
   if (sess && sess.email){
     const rec = getAccounts()[sess.email];
-    if (rec && rec.hash === sess.hash){ user = { email: sess.email, name: rec.name, since: rec.since }; startApp(); return; }
+    if (rec && rec.hash === sess.hash){
+      user = { email: sess.email, name: rec.name, role: rec.role === 'mentor' ? 'mentor' : 'student',
+        classCode: rec.classCode || null, since: rec.since };
+      startApp(); return;
+    }
   }
   showAuth();
 })();

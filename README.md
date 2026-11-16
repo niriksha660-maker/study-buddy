@@ -17,6 +17,10 @@ A **self-contained, offline-first study planner & doubt solver** in a *single HT
 - 📲 **Installable PWA** — service worker + runtime-generated manifest, works offline after first visit
 - 💾 **Backup/restore** — one-click JSON backup download & restore (with auto-backup rescue)
 - 🔀 **Multi-tab safe** — edits in two open tabs are merged (revision stamps + three-way merge) instead of the last save silently overwriting the other
+- 🧑‍🏫 **Role-based access** — accounts are created as Student or Mentor. A mentor gets a class code (`SB-XXXXX`); students join with it once and get the whole mentor portal: assignments, papers & important questions, the class doubt board and tests. Mentor-only areas (class hub, test authoring, flashcards) are blocked in the action handlers, not just hidden.
+- 🧪 **Test portal** — mentors build tests (questions, options, correct answer, marks), publish them, and marks are graded automatically; students see their score, mentors see every submission and class average
+- 📊 **Mentor dashboard** — class code, students, open work, subjects held, class average and a live activity feed of joins, assignment ticks, doubts and test submissions
+- 👤 **Account page & auth pages** — dedicated Sign in / Create account / signed-out screens, plus an Account page with role, class code, Google sign-in status, backup/restore and sign out
 
 ## Files
 | File | What it is |
