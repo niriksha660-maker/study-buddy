@@ -328,6 +328,7 @@ body[data-role="student"] [data-role="mentor"]{display:none!important}
     <header class="topbar">
       <h1 id="topbar-title">Dashboard</h1>
       <div class="spacer"></div>
+      <span id="pill-role"></span>
       <span id="pill-exam" data-act="edit-exams" title="Edit exam dates (shortcut: E)" style="cursor:pointer"></span>
       <span id="pill-today"></span>
       <span id="pill-streak"></span>
@@ -372,6 +373,7 @@ const GOOGLE_ID_KEY = 'studybuddy.googleClientId';
 const DAY = 86400000;
 let user = null;               // signed-in profile {email, name, role, since} — null = guest
 let signupRole = 'student';    // role chosen on the Create-account pane
+let signinRole = 'student';    // portal chosen on the Sign-in pane
 let pendingJoinCode = null;    // class code typed during sign-up, joined after boot
 
 function todayISO(d = new Date()){
@@ -1406,6 +1408,8 @@ function renderPills(){
     ? `<span class="pill acc">🎓 ${esc(exam.name)} · ${d===0?'today': d===1?'tomorrow':'in '+d+' days'}</span>`
     : `<span class="pill warn">No exam date set</span>`;
   $('#pill-today').innerHTML = `<span class="pill">📅 ${fmtDay(todayISO())}</span>`;
+  const rolePill = $('#pill-role');
+  if (rolePill) rolePill.innerHTML = `<span class="pill ${isMentor() ? 'acc' : ''}">${ROLE_ICON[currentRole()]} ${roleName()} portal</span>`;
   const due = cardsDueCount();
   $('#pill-streak').innerHTML = `<span class="pill ${due?'warn':'good'}">🔥 ${streakDays()}d streak${due?` · ${due} cards due`:''}</span>`;
 
@@ -3488,9 +3492,10 @@ document.addEventListener('click', e => {
       try { localStorage.removeItem(GOOGLE_ID_KEY); } catch(e){}
       toast('Saved Google Client ID removed'); renderAccount(); break; }
     case 'role-pick': {
-      signupRole = el.dataset.role === 'mentor' ? 'mentor' : 'student';
-      $$('.role-pick').forEach(b => {
-        const on = b.dataset.role === signupRole;
+      const pick = el.dataset.role === 'mentor' ? 'mentor' : 'student';
+      if (el.dataset.scope === 'signin') signinRole = pick; else signupRole = pick;
+      $$(el.dataset.scope === 'signin' ? '.signin-pick' : '.signup-pick').forEach(b => {
+        const on = b.dataset.role === pick;
         b.classList.toggle('on', on); b.classList.toggle('ghost', !on);
       });
       break; }
@@ -3794,6 +3799,7 @@ const sessionStore = {   // stay signed in across reloads; never let storage err
 function showAuth(msg, page){
   page = page === 'signup' ? 'signup' : page === 'signedout' ? 'signedout' : 'signin';
   signupRole = 'student';
+  signinRole = 'student';
   const el = $('#auth-screen');
   el.style.display = 'flex';
 
@@ -3831,6 +3837,13 @@ function showAuth(msg, page){
       <div id="a-pane-signin" style="display:${signup?'none':'flex'};flex-direction:column">
         <h2 style="font-size:15px;margin:0 0 10px">Sign in to your account</h2>
         <div class="grid" style="gap:10px">
+          <div class="f">Sign in to
+            <div class="row" style="gap:8px;margin-top:6px">
+              <button type="button" class="btn sm role-pick signin-pick on" data-act="role-pick" data-scope="signin" data-role="student">🧑‍🎓 Student portal</button>
+              <button type="button" class="btn sm ghost role-pick signin-pick" data-act="role-pick" data-scope="signin" data-role="mentor">🧑‍🏫 Mentor portal</button>
+            </div>
+            <div class="sub" style="font-size:12px;margin-top:6px">Students open the planner + their mentor's class portal. Mentors open the class dashboard, papers and test portal.</div>
+          </div>
           <label class="f">Email<input id="a-email" type="email" placeholder="you@example.com" autocomplete="username"></label>
           <label class="f">Password<input id="a-pass" type="password" placeholder="••••••••" autocomplete="current-password"></label>
         </div>
@@ -3847,8 +3860,8 @@ function showAuth(msg, page){
           <label class="f">Confirm password<input id="s-pass2" type="password" placeholder="repeat the password" autocomplete="new-password"></label>
           <div class="f">I am joining as
             <div class="row" style="gap:8px;margin-top:6px">
-              <button type="button" class="btn sm role-pick on" data-act="role-pick" data-role="student">🧑‍🎓 Student</button>
-              <button type="button" class="btn sm ghost role-pick" data-act="role-pick" data-role="mentor">🧑‍🏫 Mentor</button>
+              <button type="button" class="btn sm role-pick signup-pick on" data-act="role-pick" data-scope="signup" data-role="student">🧑‍🎓 Student</button>
+              <button type="button" class="btn sm ghost role-pick signup-pick" data-act="role-pick" data-scope="signup" data-role="mentor">🧑‍🏫 Mentor</button>
             </div>
             <div class="sub" style="font-size:12px;margin-top:6px">Students get the planner plus everything their mentor publishes. Mentors get a class code, flashcards and the test portal.</div>
           </div>
@@ -3905,7 +3918,17 @@ function authSignIn(){
   const rec = getAccounts()[email];
   if (!rec) return err('No account found for this email — switch to Create account');
   if (rec.hash !== pwHash(pass)) return err('Wrong password for this email');
-  user = { email, name: rec.name, role: rec.role === 'mentor' ? 'mentor' : 'student',
+  const accountRole = rec.role === 'mentor' ? 'mentor' : 'student';
+  if (accountRole !== signinRole){
+    // the portal you picked has to match the account — point at the right one instead of guessing
+    signinRole = accountRole;
+    $$('.signin-pick').forEach(b => {
+      const on = b.dataset.role === accountRole;
+      b.classList.toggle('on', on); b.classList.toggle('ghost', !on);
+    });
+    return err(`This email is a ${ROLE_LABEL[accountRole]} account. We picked the ${ROLE_LABEL[accountRole]} portal for you — tap Sign in again.`);
+  }
+  user = { email, name: rec.name, role: accountRole,
     classCode: rec.classCode || null, since: rec.since };
   sessionStore.set({ email, hash: rec.hash, role: user.role });
   authScreenHide();
@@ -3997,6 +4020,11 @@ function initGoogleAuthInto(sel){
   document.head.appendChild(sc);
 }
 function initGoogleAuth(){ initGoogleAuthInto('#g-btn'); }
+function chosenAuthRole(){
+  const su = $('#a-pane-signup');
+  const onSignup = !!su && su.style.display !== 'none';
+  return ((onSignup ? signupRole : signinRole) === 'mentor') ? 'mentor' : 'student';
+}
 function handleGoogleCredential(res){
   const p = googleDecodeJwt(res?.credential || '');
   if (!p || !p.email) return authErr('Google sign-in failed — no email in the response');
@@ -4005,12 +4033,14 @@ function handleGoogleCredential(res){
   if (!rec){
     // first Google sign-in creates the account — honour the role picked on the form
     rec = { name: p.name || email.split('@')[0], hash: 'google:' + p.sub, googleSub: p.sub,
-      role: signupRole === 'mentor' ? 'mentor' : 'student', since: Date.now() };
+      role: chosenAuthRole(), since: Date.now() };
     setAccount(email, rec);
   } else if (!rec.googleSub){
     rec.googleSub = p.sub; setAccount(email, rec);   // link Google to the existing local account
   }
-  user = { email, name: rec.name, role: rec.role === 'mentor' ? 'mentor' : 'student',
+  const gRole = rec.role === 'mentor' ? 'mentor' : 'student';
+  if (gRole !== chosenAuthRole()){ authErr(`This Google account is a ${ROLE_LABEL[gRole]} account — choose the ${ROLE_LABEL[gRole]} portal above`); return; }
+  user = { email, name: rec.name, role: gRole,
     classCode: rec.classCode || null, since: rec.since };
   sessionStore.set({ email, hash: rec.hash, role: user.role, google:true });
   authScreenHide();
