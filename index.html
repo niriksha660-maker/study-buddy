@@ -436,7 +436,7 @@ function load(){
     const norm = Object.assign(defaultState(), s);
     // remember which revision this tab is looking at + a snapshot to merge from
     docRev = (readDocMeta(key) || {}).rev || 0;
-    docBase = clone(norm);
+    docBase = clone(norm); docBaseRaw = null;
     return norm;
   } catch(e){ return null; }
 }
@@ -455,10 +455,17 @@ function load(){
 const TAB_ID = uid();
 let docRev = 0;       // revision of the newest copy this tab has loaded or written
 let docBase = null;   // snapshot of the copy this tab last loaded/wrote (merge ancestor)
+let docBaseRaw = null; // same snapshot as the exact string we wrote — parsed only if a merge is needed
 let lastSyncAt = 0;
+let lastBakAt = 0;
 const docMetaKey = key => key + ':meta';
 
 function clone(v){ try { return JSON.parse(JSON.stringify(v)); } catch(e){ return v; } }
+function baseSnapshot(){
+  if (docBase) return docBase;
+  if (!docBaseRaw) return null;
+  try { return JSON.parse(docBaseRaw); } catch(e){ return null; }
+}
 function isPlainObj(v){ return v !== null && typeof v === 'object' && !Array.isArray(v); }
 function hasId(x){ return isPlainObj(x) && typeof x.id === 'string' && x.id !== ''; }
 
@@ -554,20 +561,28 @@ function syncToast(msg){
 function save(){
   const key = dataKey();
   try {
-    const stored = readDocState(key);
     const meta = readDocMeta(key);
     const storedRev = (meta && meta.rev) || 0;
-    if (stored && docBase && meta && meta.tab !== TAB_ID && storedRev > docRev){
-      // another tab wrote while we were holding this state — merge, don't overwrite
-      state = Object.assign(defaultState(), mergeState(docBase, state, stored));
-      syncToast('🔀 Merged changes from another tab');
+    // Only another tab's write forces a full read + parse of the stored document.
+    // Doing that (plus a backup copy and a deep clone) on every tap made the app
+    // crawl once papers and photos were saved, so it now happens only when needed.
+    if (meta && meta.tab !== TAB_ID && storedRev > docRev){
+      const base = baseSnapshot();
+      const stored = base ? readDocState(key) : null;
+      if (stored){
+        // another tab wrote while we were holding this state — merge, don't overwrite
+        state = Object.assign(defaultState(), mergeState(base, state, stored));
+        syncToast('🔀 Merged changes from another tab');
+      }
     }
+    const now = Date.now();
     const s = JSON.stringify(state);
     docRev = Math.max(docRev, storedRev) + 1;
     localStorage.setItem(key, s);
-    localStorage.setItem(key + ':bak', s);
-    localStorage.setItem(docMetaKey(key), JSON.stringify({ rev: docRev, tab: TAB_ID, at: Date.now() }));
-    docBase = clone(state);
+    // the rescue copy only needs to be recent, not written twice on every action
+    if (now - lastBakAt > 60000){ try { localStorage.setItem(key + ':bak', s); } catch(e){} lastBakAt = now; }
+    localStorage.setItem(docMetaKey(key), JSON.stringify({ rev: docRev, tab: TAB_ID, at: now }));
+    docBase = null; docBaseRaw = s;
   } catch(e){ console.warn('save failed', e); }
 }
 
@@ -580,9 +595,9 @@ window.addEventListener('storage', e => {
   if (!meta || meta.tab === TAB_ID || meta.rev <= docRev) return;
   const stored = readDocState(key);
   if (!stored) return;
-  state = Object.assign(defaultState(), mergeState(docBase, state, stored));
+  state = Object.assign(defaultState(), mergeState(baseSnapshot(), state, stored));
   docRev = meta.rev;
-  docBase = clone(stored);
+  docBase = stored; docBaseRaw = null;
   const ae = document.activeElement;
   const typing = ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable);
   if (!typing) render();   // don't yank the field a user is typing in
@@ -2106,6 +2121,7 @@ const BLOCK_TYPES = { formula:'Formula', concept:'Concept', example:'Example', s
    DOUBT SOLVER — ask any doubt, get a step-by-step solution
    ============================================================ */
 let dbFilter = { subject:'all', state:'all' };
+let dbSearchTimer = null;
 let dbReactOpen = null, dbEmojiOpen = null, dbPendingImg = null, dbPendingTarget = null, dbModalPeople = new Set();
 let dbTab = 'doubts'; // 'doubts' | 'groups' | 'community'
 let dbPersona = 'me'; // 'me' | 'teacher' | person-id — who is typing in the chat
@@ -2689,8 +2705,14 @@ function renderDoubts(){
         <br><br><button class="btn primary" data-act="add-doubt-modal">＋ Ask a doubt</button></div></div>`}`;
   $$('.db-cin').forEach(ci => { const v = keepVals[ci.dataset.did]; if (v) ci.value = v; });
   const inp = $('#db-search');
-  if (inp) inp.addEventListener('input', () => { dbFilter.q = inp.value; renderDoubts();
-    const el2 = $('#db-search'); if (el2){ el2.focus(); el2.setSelectionRange(el2.value.length, el2.value.length); } });
+  if (inp) inp.addEventListener('input', () => {
+    dbFilter.q = inp.value;
+    clearTimeout(dbSearchTimer);
+    dbSearchTimer = setTimeout(() => {   // render once the typing settles, not on every keystroke
+      renderDoubts();
+      const el2 = $('#db-search'); if (el2){ el2.focus(); el2.setSelectionRange(el2.value.length, el2.value.length); }
+    }, 140);
+  });
   $$('.db-cin').forEach(ci => ci.addEventListener('keydown', e => {
     if (e.key === 'Enter'){ e.preventDefault(); dbSendMsg(ci.dataset.did); }
   }));
@@ -4193,8 +4215,14 @@ function startApp(){
 }
 /* ---------- PWA: installable app with its own icon on the home screen ---------- */
 (function(){ // show update banner (if any) once app shell is ready
-  const tryShow = () => { const b = document.getElementById('update-banner'); if (b) requestAnimationFrame(()=>b.classList.add('show')); };
-  new MutationObserver(tryShow).observe(document.documentElement, {childList:true, subtree:true});
+  const obs = new MutationObserver(() => {
+    const b = document.getElementById('update-banner');
+    if (!b) return;
+    obs.disconnect();   // once the banner is in the DOM, stop observing every change
+    requestAnimationFrame(()=>b.classList.add('show'));
+  });
+  obs.observe(document.documentElement, {childList:true, subtree:true});
+  setTimeout(() => obs.disconnect(), 15000);
 })();
 let pwaPromptEvt = null;
 function pwaIcon(size){
