@@ -290,7 +290,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none
   .content{padding:16px 14px 60px}
 }
   /* auth screen + user chip */
-  #auth-screen{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:radial-gradient(900px 600px at 15% 0%,#16203a,#0b0f1a 70%)}
+  #auth-screen{position:fixed;inset:0;z-index:70;display:none;align-items:center;align-items:safe center;justify-content:center;overflow-y:auto;overscroll-behavior:contain;padding:20px 12px;background:radial-gradient(900px 600px at 15% 0%,#16203a,#0b0f1a 70%)}
   .auth-card{width:min(420px,92vw);background:#131a2b;border:1px solid var(--border);border-radius:18px;padding:26px;box-shadow:0 24px 80px rgba(0,0,0,.55)}
   .auth-err{color:var(--red);font-size:12.5px;min-height:18px;margin:6px 0 2px}
   .auth-tabs{display:flex;background:#0d1424;border:1px solid var(--border);border-radius:12px;padding:4px;margin:18px 0 14px}
