@@ -303,7 +303,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none
   .uc-e{color:var(--muted);font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
 .code-badge{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;font-size:15px;font-weight:700;padding:8px 14px;border-radius:10px;border:1px dashed var(--border2);background:#121829;color:var(--text)}
 /* role-based access — mentor-only controls are hidden for student accounts */
-body[data-role="student"] [data-role="mentor"]{display:none!important}
+body[data-role="student"] .nav-btn[data-role="mentor"]{display:none!important}
 .role-pick.on{border-color:var(--accent);background:#1a2338;color:var(--text)}
 </style>
 </head>
@@ -3972,7 +3972,20 @@ function doLogout(){
   showAuth(null, 'signedout');
 }
 function setRole(role){
-  if (!user || !user.email){ toast('Sign in with an account to switch role'); return; }
+  if (!user || !user.email){
+    // no account yet (guest) — open the sign-in card with this portal already picked
+    const g = role === 'mentor' ? 'mentor' : 'student';
+    authScreenHide();
+    showAuth(null, 'signin');
+    signinRole = g;
+    $$('.signin-pick').forEach(b => {
+      const on = b.dataset.role === g;
+      b.classList.toggle('on', on);
+      b.classList.toggle('ghost', !on);
+    });
+    toast(g === 'mentor' ? 'Sign in or create an account as a Mentor to open the mentor workspace' : 'Sign in or create an account as a Student to open the student portal');
+    return;
+  }
   const r = role === 'mentor' ? 'mentor' : 'student';
   const rec = getAccounts()[user.email];
   if (rec){ rec.role = r; setAccount(user.email, rec); }
