@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">  <title>Sbeta · ..STUDY BUDDYYY.. — Study Planner & Doubt Solver</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">  <title>Sbeta · ..STUDY BUDDYYY.. — Class Portal</title>
 <meta name="theme-color" content="#0b1020">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -325,7 +325,6 @@ body[data-role="student"] .nav-btn[data-role="mentor"]{display:none!important}
       <h1 id="topbar-title">Dashboard</h1>
       <div class="spacer"></div>
       <span id="pill-role"></span>
-      <span id="pill-exam" data-act="edit-exams" title="Edit exam dates (shortcut: E)" style="cursor:pointer"></span>
       <span id="pill-today"></span>
       <span id="pill-streak"></span>
     </header>
@@ -1443,18 +1442,10 @@ function closeModal(){ if (typeof libBlobUrl === 'string' && libBlobUrl){ try { 
   $('#modal-backdrop').classList.remove('open'); $('#modal-backdrop').innerHTML=''; }
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeModal();
-  // shortcut: E opens the exam-dates editor (unless typing or a modal is open)
-  if ((e.key === 'e' || e.key === 'E') && !e.ctrlKey && !e.metaKey && !e.altKey){
-    const t = e.target;
-    const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
-    if (!typing && !$('#modal-backdrop').classList.contains('open')){ e.preventDefault(); openExamDatesModal(); }
-  }
 });
 
-const VIEW_TITLES = { dashboard:'Dashboard', subjects:'Subjects & Syllabus', plan:'Study Plan',
-  pomodoro:'Focus Timer', flashcards:'Flashcards — Active Recall',  doubts:'Doubt Solver',
-  library:'Notes & Previous Papers', coach:'AI Study Coach', mentor:'Mentor Workspace',
-  tests:'Tests & Marks', account:'Account' };
+const VIEW_TITLES = { dashboard:'Dashboard', subjects:'Subjects', doubts:'Doubt Solver',
+  library:'Notes & Papers', coach:'AI Coach', tests:'Tests', account:'Account' };
 
 /* ---------- navigation ---------- */
 function setView(v){
@@ -1474,11 +1465,6 @@ document.addEventListener('click', e => {
 
 /* ---------- topbar pills + sidebar footer ---------- */
 function renderPills(){
-  const exam = nextExam();
-  const d = exam ? daysUntil(exam.examDate) : null;
-  $('#pill-exam').innerHTML = exam
-    ? `<span class="pill acc">🎓 ${esc(exam.name)} · ${d===0?'today': d===1?'tomorrow':'in '+d+' days'}</span>`
-    : `<span class="pill warn">No exam date set</span>`;
   $('#pill-today').innerHTML = `<span class="pill">📅 ${fmtDay(todayISO())}</span>`;
   const rolePill = $('#pill-role');
   if (rolePill) rolePill.innerHTML = `<span class="pill ${isMentor() ? 'acc' : ''}">${ROLE_ICON[currentRole()]} ${roleName()} portal</span>`;
