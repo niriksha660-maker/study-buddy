@@ -313,14 +313,10 @@ body[data-role="student"] .nav-btn[data-role="mentor"]{display:none!important}
     <div class="brand"><div class="logo">Sβ</div><div><b>..STUDY BUDDYYY..</b><small>by Sbeta</small></div></div>
     <button class="nav-btn active" data-act="nav" data-view="dashboard"><span class="ico">📊</span>Dashboard</button>
     <button class="nav-btn" data-act="nav" data-view="subjects"><span class="ico">📚</span>Subjects</button>
-    <button class="nav-btn" data-act="nav" data-view="plan"><span class="ico">🗓️</span>Study Plan</button>
-    <button class="nav-btn" data-act="nav" data-view="pomodoro"><span class="ico">⏱️</span>Focus Timer</button>
-    <button class="nav-btn" data-act="nav" data-view="flashcards" data-role="mentor"><span class="ico">🃏</span>Flashcards</button>
     <button class="nav-btn" data-act="nav" data-view="doubts"><span class="ico">🙋</span>Doubt Solver</button>
     <button class="nav-btn" data-act="nav" data-view="library"><span class="ico">🗂️</span>Notes &amp; Papers</button>
     <button class="nav-btn" data-act="nav" data-view="coach"><span class="ico">🤖</span>AI Coach</button>
     <button class="nav-btn" data-act="nav" data-view="tests"><span class="ico">✍</span>Tests</button>
-    <button class="nav-btn" data-act="nav" data-view="mentor" data-role="mentor"><span class="ico">🧑‍🏫</span>Mentor</button>
     <button class="nav-btn" data-act="nav" data-view="account"><span class="ico">👤</span>Account</button>
     <div class="side-foot" id="side-foot"></div>
   </aside>
@@ -627,6 +623,7 @@ function viewAllowed(v){ return !VIEW_ROLE[v] || VIEW_ROLE[v] === currentRole();
 const MENTOR_ONLY_ACTS = new Set([
   'class-assign','class-assign-del','class-member-del','class-note-open','class-note-save','class-note-del',
   'class-doubt-answer','test-open','test-create','test-q-open','test-q-save','test-publish','test-del',
+  'class-subject-add','class-subject-del','class-topic-add','class-topic-del',
   'class-code-copy','class-code-new'
 ]);
 const STUDENT_ONLY_ACTS = new Set(['class-join','class-assign-done','test-submit']);
@@ -637,9 +634,9 @@ const classKey = code => CLASS_PREFIX + code;
 let cls = null, clsCode = null, clsRev = 0, clsBase = null;
 function defaultClass(code){
   return { meta:{ code, name:'My class', mentor:'', createdAt:Date.now() },
-    members:[], assignments:[], done:[], notes:[], doubts:[], tests:[], submissions:[], activity:[] };
+    members:[], subjects:[], assignments:[], done:[], notes:[], doubts:[], tests:[], submissions:[], activity:[] };
 }
-const CLASS_LISTS = ['members','assignments','done','notes','doubts','tests','submissions','activity'];
+const CLASS_LISTS = ['members','subjects','assignments','done','notes','doubts','tests','submissions','activity'];
 function activeClassCode(){ return (user && user.classCode) || null; }
 function loadClass(){
   clsCode = activeClassCode();
@@ -744,19 +741,26 @@ function classTests(){ return (cls ? cls.tests.slice() : []).sort((a,b) => (b.at
 function mySubmission(testId){ return cls ? cls.submissions.find(s => s.testId === testId && sameEmail(s.email, myEmail())) : null; }
 function classNotes(){ return (cls ? cls.notes.slice() : []).sort((a,b) => (b.at || 0) - (a.at || 0)); }
 function classDoubts(){ return (cls ? cls.doubts.slice() : []).sort((a,b) => (b.at || 0) - (a.at || 0)); }
-function classSubjects(){
-  if (!cls) return [];
-  const map = new Map();
-  const add = (name, kind) => {
-    const key = (String(name || 'General').trim() || 'General');
-    if (!map.has(key)) map.set(key, { name:key, assignments:0, tests:0, notes:0 });
-    if (kind) map.get(key)[kind]++;
-  };
-  cls.assignments.forEach(a => add(a.subject, 'assignments'));
-  cls.tests.forEach(t => add(t.subject, 'tests'));
-  cls.notes.forEach(n => add(n.subject, 'notes'));
-  return [...map.values()];
+/* Subjects a mentor holds live in the class document, each with its topics.
+   Assignments, tests and papers point at one of these by id, so the subject
+   list a mentor edits is exactly what students see. */
+function classSubjectList(){ return (cls && cls.subjects) || []; }
+function classSubjectById(id){ return classSubjectList().find(s => s.id === id) || null; }
+function classSubjectByName(name){
+  const n = String(name || '').trim().toLowerCase();
+  return classSubjectList().find(s => s.name.toLowerCase() === n) || null;
 }
+function ensureClassSubject(name){
+  if (!cls) return null;
+  cls.subjects = cls.subjects || [];
+  const clean = String(name || '').trim();
+  const found = classSubjectByName(clean || 'General');
+  if (found) return found;
+  const s = { id: uid(), name: clean || 'General', topics: [] };
+  cls.subjects.push(s);
+  return s;
+}
+function subjectAssignments(sid){ return (cls ? cls.assignments : []).filter(a => a.subjectId === sid); }
 function testTotal(t){ return (t.questions || []).reduce((sum,q) => sum + (+q.marks || 1), 0); }
 function testMarksFor(t){ const sub = mySubmission(t.id); return sub ? `${sub.score}/${sub.total}` : '—'; }
 
@@ -824,7 +828,7 @@ function renderMentorDashboard(){
   const avg = subs.length
     ? Math.round(subs.reduce((a,s) => a + (s.total ? s.score / s.total * 100 : 0), 0) / subs.length)
     : null;
-  const subjects = classSubjects();
+  const subjects = classSubjectList();
   const open = assignments.filter(a => assignmentDoneCount(a) < cls.members.length).length;
   $('#panel-dashboard').innerHTML = `
     <div class="card hero">
@@ -845,20 +849,21 @@ function renderMentorDashboard(){
     </div>
 
     <div class="card" style="margin-top:16px">
-      <h2>Your subjects</h2>
+      <div class="row wrap" style="align-items:center"><h2 class="grow" style="margin:0">Subjects you hold</h2>
+        <button class="btn sm ghost" data-act="nav" data-view="subjects">Manage subjects</button></div>
       <div class="grid g3" style="margin-top:8px">
         ${subjects.length ? subjects.map(s => `<div class="stat" style="background:#121829">
           <div class="k">${esc(s.name)}</div>
-          <div class="v" style="font-size:16px">${s.assignments} work · ${s.tests} tests</div>
-          <div class="s">${s.notes} paper${s.notes===1?'':'s'} shared</div>
-        </div>`).join('') : `<p class="sub" style="margin:0">No subjects yet — the subjects on your assignments, tests and papers show up here.</p>`}
+          <div class="v" style="font-size:16px">${(s.topics||[]).length} topic${(s.topics||[]).length===1?'':'s'} · ${subjectAssignments(s.id).length} work</div>
+          <div class="s">shown to ${cls.members.length} student${cls.members.length===1?'':'s'}</div>
+        </div>`).join('') : `<p class="sub" style="margin:0">No subjects yet — add the subjects you teach on the Subjects tab.</p>`}
       </div>
     </div>
 
     <div class="grid g2" style="margin-top:16px;gap:16px">
       <div class="card">
         <div class="row wrap" style="align-items:center"><h2 class="grow" style="margin:0">Assigned work</h2>
-          <button class="btn sm ghost" data-act="nav" data-view="mentor">Manage</button></div>
+          <button class="btn sm ghost" data-act="nav" data-view="subjects">Manage</button></div>
         <div class="list" style="margin-top:8px">
           ${assignments.length ? assignments.slice(0,6).map(a => `<div class="item">
             <span>📌</span>
@@ -868,15 +873,15 @@ function renderMentorDashboard(){
           </div>`).join('') : '<p class="sub" style="margin:4px 0">Nothing assigned yet.</p>'}
         </div>
         <div class="row wrap" style="gap:6px;margin-top:10px">
-          <input id="ca-title" placeholder="Assignment title" style="flex:2;min-width:150px">
-          <input id="ca-subject" placeholder="Subject" style="flex:1;min-width:100px">
-          <input id="ca-due" type="date" style="flex:none">
+          <input class="ca-title" placeholder="Assignment title" style="flex:2;min-width:150px">
+          <select class="ca-subject" style="flex:1;min-width:110px"><option value="">Subject…</option>${classSubjectList().map(x=>`<option>${esc(x.name)}</option>`).join('')}</select>
+          <input class="ca-due" type="date" style="flex:none">
           <button class="btn sm primary" data-act="class-assign">Assign</button>
         </div>
       </div>
       <div class="card">
         <div class="row wrap" style="align-items:center"><h2 class="grow" style="margin:0">Recent updates</h2>
-          <button class="btn sm ghost" data-act="nav" data-view="mentor">Class hub</button></div>
+          <button class="btn sm ghost" data-act="nav" data-view="doubts">Doubt board</button></div>
         <div style="margin-top:6px">${activityHtml(7)}</div>
       </div>
     </div>`;
@@ -978,8 +983,8 @@ function testCardMentor(t){
   const total = testTotal(t);
   return `<div class="card" style="margin-top:12px">
     <div class="row wrap" style="align-items:center;gap:8px">
-      <div class="grow"><b>${esc(t.title)}</b>${t.subject ? ` <span class="tag">${esc(t.subject)}</span>` : ''}
-        <div class="uc-e">${qs.length} question${qs.length===1?'':'s'} · ${total} mark${total===1?'':'s'}${t.due ? ' · due ' + fmtDay(t.due) : ''} · ${subs.length} submission${subs.length===1?'':'s'}</div></div>
+      <div class="grow"><b>${esc(t.title)}</b>${t.subject ? ` <span class="tag">${esc(t.subject)}</span>` : ''}${t.topic ? ` <span class="tag">${esc(t.topic)}</span>` : ''}
+        <div class="uc-e">${qs.length} question${qs.length===1?'':'s'} · ${total} mark${total===1?'':'s'} · ⏱ ${t.durationMin || 30} min${t.due ? ' · ' + fmtDay(t.due) : ''} · ${subs.length} submission${subs.length===1?'':'s'}</div></div>
       <span class="pill ${t.published ? 'good' : 'warn'}">${t.published ? 'published' : 'draft'}</span>
       <button class="btn sm ghost" data-act="test-q-open" data-id="${t.id}">＋ Question</button>
       <button class="btn sm ${t.published ? 'ghost' : 'primary'}" data-act="test-publish" data-id="${t.id}">${t.published ? 'Unpublish' : 'Publish'}</button>
@@ -1006,16 +1011,16 @@ function testCardStudent(t){
     const pct = total ? Math.round(sub.score / sub.total * 100) : 0;
     return `<div class="card" style="margin-top:12px">
       <div class="row wrap" style="align-items:center;gap:8px">
-        <div class="grow"><b>${esc(t.title)}</b>${t.subject ? ` <span class="tag">${esc(t.subject)}</span>` : ''}
-          <div class="uc-e">submitted ${timeAgo(sub.at || Date.now())}</div></div>
+        <div class="grow"><b>${esc(t.title)}</b>${t.subject ? ` <span class="tag">${esc(t.subject)}</span>` : ''}${t.topic ? ` <span class="tag">${esc(t.topic)}</span>` : ''}
+          <div class="uc-e">⏱ ${t.durationMin || 30} min · submitted ${timeAgo(sub.at || Date.now())}</div></div>
         <span class="pill ${pct >= 50 ? 'good' : 'warn'}">${sub.score}/${sub.total} · ${pct}%</span>
       </div>
     </div>`;
   }
   return `<div class="card" style="margin-top:12px">
     <div class="row wrap" style="align-items:center;gap:8px">
-      <div class="grow"><b>${esc(t.title)}</b>${t.subject ? ` <span class="tag">${esc(t.subject)}</span>` : ''}
-        <div class="uc-e">${qs.length} question${qs.length===1?'':'s'} · ${total} mark${total===1?'':'s'}${t.due ? ' · due ' + fmtDay(t.due) : ''}</div></div>
+      <div class="grow"><b>${esc(t.title)}</b>${t.subject ? ` <span class="tag">${esc(t.subject)}</span>` : ''}${t.topic ? ` <span class="tag">${esc(t.topic)}</span>` : ''}
+        <div class="uc-e">${qs.length} question${qs.length===1?'':'s'} · ${total} mark${total===1?'':'s'} · ⏱ ${t.durationMin || 30} min${t.due ? ' · ' + fmtDay(t.due) : ''}</div></div>
     </div>
     <div style="margin-top:10px">
       ${qs.map((q,i) => `<div style="margin-top:10px">
@@ -1032,16 +1037,22 @@ function testCardStudent(t){
   </div>`;
 }
 function testCreateModal(){
-  openModal(`<h3>New test</h3>
-    <p class="sub" style="margin:4px 0 0">It stays a draft until you publish it — students only see published tests.</p>
+  const subs = classSubjectList();
+  openModal(`<h3>New question paper</h3>
+    <p class="sub" style="margin:4px 0 0">Pick the subject and topic, set how long students get, add the questions, then publish. It appears on their Tests tab straight away.</p>
     <div class="grid" style="gap:10px;margin-top:12px">
-      <label class="f">Title<input id="t-title" placeholder="Unit 3 — Integration"></label>
-      <label class="f">Subject<input id="t-subject" placeholder="Maths"></label>
-      <label class="f">Due date<input id="t-due" type="date"></label>
+      <label class="f">Paper title<input id="t-title" placeholder="Unit 3 — Integration test"></label>
+      <label class="f">Subject
+        <select id="t-subject"><option value="">Subject…</option>${subs.map(x=>`<option>${esc(x.name)}</option>`).join('')}</select></label>
+      <label class="f">Topic<input id="t-topic" placeholder="e.g. Integration by parts"></label>
+      <div class="grid g2">
+        <label class="f">Date<input id="t-due" type="date"></label>
+        <label class="f">Time allowed (minutes)<input id="t-duration" type="number" min="5" max="300" step="5" value="30"></label>
+      </div>
     </div>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px">
       <button class="btn ghost" data-act="modal-close">Cancel</button>
-      <button class="btn primary" data-act="test-create">Create test</button>
+      <button class="btn primary" data-act="test-create">Create paper</button>
     </div>`);
 }
 function testQuestionModal(tid){
@@ -1062,9 +1073,13 @@ function testQuestionModal(tid){
 function testCreate(){
   const title = ($('#t-title')?.value || '').trim();
   if (!title){ toast('Give the test a title'); return; }
-  cls.tests.push({ id: uid(), title, subject: ($('#t-subject')?.value || '').trim() || 'General',
+  const subj = ensureClassSubject($('#t-subject')?.value);
+  cls.tests.push({ id: uid(), title,
+    subjectId: subj ? subj.id : null, subject: subj ? subj.name : 'General',
+    topic: ($('#t-topic')?.value || '').trim(),
+    durationMin: clamp(+($('#t-duration')?.value) || 30, 5, 300),
     due: $('#t-due')?.value || null, published:false, at: Date.now(), by: (user && user.name) || 'Mentor', questions: [] });
-  saveClass(); closeModal(); renderTests(); toast('Test created — add its questions');
+  saveClass(); closeModal(); renderTests(); toast('Paper created — add its questions');
 }
 function testAddQuestion(tid){
   const t = cls && cls.tests.find(x => x.id === tid); if (!t) return;
@@ -1100,7 +1115,7 @@ function classLibraryHtml(){
   return `<div class="card" style="margin-bottom:16px">
     <div class="row wrap" style="align-items:center;gap:8px">
       <div class="grow"><h2 style="margin:0;font-size:15px">🗂  ${esc(cls.meta.name || 'Class')} — papers &amp; notes</h2>
-        <div class="uc-e">${isMentor() ? 'Publish important questions and papers here; every student with your code sees them.' : 'Published by ' + esc(cls.meta.mentor || 'your mentor') + ' — read only.'}</div></div>
+        <div class="uc-e">${isMentor() ? 'Publish important questions and papers here; every student with your code sees them.' : 'Published by ' + esc(cls.meta.mentor || 'your mentor') + ' — read only, only your mentor can add or remove.'}</div></div>
       ${isMentor() ? '<button class="btn sm primary" data-act="class-note-open">＋ Add paper / notes</button>' : ''}
     </div>
     ${items.length ? `<div class="list" style="margin-top:10px">${items.map(n => `<div class="item" style="align-items:flex-start">
@@ -1128,10 +1143,10 @@ function classNoteModal(){
 }
 
 /* ---------- class doubt board (inside Doubt Solver) ---------- */
-function classBoardHtml(){
+function classBoardHtml(showAll){
   if (!user || !user.classCode) return '';
   if (!classReady()) return '';
-  const list = classDoubts().slice(0, 8);
+  const list = showAll ? classDoubts() : classDoubts().slice(0, 8);
   return `<div class="card" style="margin-bottom:16px">
     <div class="row wrap" style="align-items:center;gap:8px">
       <div class="grow"><h2 style="margin:0;font-size:15px">💬 Class doubt board</h2>
@@ -1174,12 +1189,15 @@ function handleClassAction(act, el, id){
     case 'class-join': joinClass($('#join-code')?.value); return true;
     case 'class-assign': {
       if (!cls) return true;
-      const title = ($('#ca-title')?.value || '').trim();
+      const card = el.closest('.card') || document;
+      const q = sel => card.querySelector(sel);
+      const title = (q('.ca-title')?.value || q('.sa-title')?.value || '').trim();
       if (!title){ toast('Give the work a title'); return true; }
+      const subj = el.dataset.sid ? classSubjectById(el.dataset.sid) : ensureClassSubject(q('.ca-subject')?.value);
       cls.assignments.push({ id: uid(), title,
-        subject: ($('#ca-subject')?.value || '').trim() || 'General',
-        due: $('#ca-due')?.value || null,
-        minutes: clamp(+($('#ca-min')?.value) || 30, 5, 600),
+        subjectId: subj ? subj.id : null, subject: subj ? subj.name : 'General',
+        due: q('.ca-due')?.value || q('.sa-due')?.value || null,
+        minutes: clamp(+(q('.ca-min')?.value || q('.sa-min')?.value) || 30, 5, 600),
         at: Date.now(), by: (user && user.name) || 'Mentor' });
       logActivity('assign', `New work assigned: ${title}`);
       saveClass(); render(); toast('Assigned to the class ✓');
@@ -1213,13 +1231,51 @@ function handleClassAction(act, el, id){
       else toast(code);
       return true;
     }
+    case 'class-subject-add': {
+      if (!cls) return true;
+      const card = el.closest('.card') || document;
+      const name = (card.querySelector('.cs-new')?.value || '').trim();
+      if (!name){ toast('Name the subject first'); return true; }
+      if (classSubjectByName(name)){ toast('That subject is already on the list'); return true; }
+      cls.subjects = cls.subjects || [];
+      cls.subjects.push({ id: uid(), name, topics: [] });
+      logActivity('note', `Subject added: ${name}`);
+      saveClass(); render(); toast('Subject added ✓'); return true;
+    }
+    case 'class-subject-del': {
+      if (!cls) return true;
+      const sub = classSubjectById(id); if (!sub) return true;
+      if (!confirm(`Remove ${sub.name}? Its topics and assignments go too.`)) return true;
+      cls.subjects = cls.subjects.filter(x => x.id !== id);
+      cls.assignments = cls.assignments.filter(a => a.subjectId !== id);
+      saveClass(); render(); toast('Subject removed'); return true;
+    }
+    case 'class-topic-add': {
+      if (!cls) return true;
+      const sub = classSubjectById(id); if (!sub) return true;
+      const card = el.closest('.card') || document;
+      const name = (card.querySelector('.ct-new')?.value || '').trim();
+      if (!name){ toast('Name the topic first'); return true; }
+      sub.topics = sub.topics || [];
+      if (sub.topics.some(t => t.name.toLowerCase() === name.toLowerCase())){ toast('That topic is already listed'); return true; }
+      sub.topics.push({ id: uid(), name });
+      saveClass(); render(); toast('Topic added ✓'); return true;
+    }
+    case 'class-topic-del': {
+      if (!cls) return true;
+      const sub = classSubjectById(el.dataset.sid); if (!sub) return true;
+      sub.topics = (sub.topics || []).filter(t => t.id !== id);
+      saveClass(); render(); return true;
+    }
     case 'class-note-open': classNoteModal(); return true;
     case 'class-note-save': {
       if (!cls) return true;
       const title = ($('#cn-title')?.value || '').trim();
       if (!title){ toast('Give it a title'); return true; }
       const body = ($('#cn-body')?.value || '').trim();
-      cls.notes.push({ id: uid(), title, subject: ($('#cn-subject')?.value || '').trim() || 'General',
+      const subj = ensureClassSubject($('#cn-subject')?.value);
+      cls.notes.push({ id: uid(), title,
+        subjectId: subj ? subj.id : null, subject: subj ? subj.name : 'General',
         kind: $('#cn-kind')?.value || 'note', body, at: Date.now(), by: (user && user.name) || 'Mentor' });
       logActivity('note', `Published "${title}" to the class library`);
       saveClass(); closeModal(); render(); toast('Published to the class ✓'); return true;
@@ -1426,8 +1482,11 @@ function renderPills(){
   $('#pill-today').innerHTML = `<span class="pill">📅 ${fmtDay(todayISO())}</span>`;
   const rolePill = $('#pill-role');
   if (rolePill) rolePill.innerHTML = `<span class="pill ${isMentor() ? 'acc' : ''}">${ROLE_ICON[currentRole()]} ${roleName()} portal</span>`;
-  const due = cardsDueCount();
-  $('#pill-streak').innerHTML = `<span class="pill ${due?'warn':'good'}">🔥 ${streakDays()}d streak${due?` · ${due} cards due`:''}</span>`;
+  const openWork = classReady()
+    ? classAssignments().filter(a => isMentor() ? assignmentDoneCount(a) < cls.members.length : !assignmentDoneMine(a)).length
+    : null;
+  $('#pill-streak').innerHTML = openWork === null ? ''
+    : `<span class="pill ${openWork?'warn':'good'}">📌 ${openWork} open</span>`;
 
   const mins = studiedOn(todayISO());
   const target = state.settings.dailyTargetMin;
@@ -1453,80 +1512,71 @@ function renderPills(){
    ============================================================ */
 function renderDashboard(){
   if (isMentor()){ renderMentorDashboard(); return; }
-  const t = todayISO();
-  const todays = state.tasks.filter(x => x.date === t).sort((a,b)=> a.done - b.done);
-  const studied = studiedOn(t);
-  const planned = plannedOn(t);
-  const due = cardsDueCount();
-  const ex = nextExam();
-  const upcoming = state.subjects.filter(s=>s.examDate && daysUntil(s.examDate)>=0)
-    .sort((a,b)=>daysUntil(a.examDate)-daysUntil(b.examDate));
-  const dueCards = due ? dueCountBySubject() : [];
-  const chart = weekChart();
-
-  $('#panel-dashboard').innerHTML = `
+  const p = $('#panel-dashboard');
+  if (!classReady()){
+    p.innerHTML = `
+      <div class="card hero">
+        <h2 style="font-size:18px">${greeting()}</h2>
+        <p class="sub" style="margin:6px 0 0">Join your mentor's class to see the subjects they hold, your assignments, tests, notes and the doubt board.</p>
+      </div>
+      ${joinClassCard()}`;
+    return;
+  }
+  const work = classAssignments();
+  const openWork = work.filter(a => !assignmentDoneMine(a));
+  const tests = classTests().filter(t => t.published);
+  const todo = tests.filter(t => !mySubmission(t.id));
+  const subs = classSubjectList();
+  const mineDone = work.filter(a => assignmentDoneMine(a)).length;
+  const myMarks = cls.submissions.filter(s => sameEmail(s.email, myEmail()));
+  const avg = myMarks.length ? Math.round(myMarks.reduce((a,s) => a + (s.total ? s.score / s.total * 100 : 0), 0) / myMarks.length) : null;
+  p.innerHTML = `
     <div class="card hero">
-      <div class="row wrap">
+      <div class="row wrap" style="align-items:center;gap:10px">
         <div class="grow">
-          <h2 style="font-size:18px">${greeting()}${ex ? ` — ${esc(ex.name)} in <span style="color:var(--accent)">${Math.max(daysUntil(ex.examDate),0)} days</span>` : ''}</h2>
-          <p class="sub" style="margin:6px 0 0">${dashboardHint(due, planned, studied)}${ex ? examMotiv(ex) : ''}</p>
+          <h2 style="font-size:18px">${greeting()} — ${esc(cls.meta.name || 'your class')}</h2>
+          <p class="sub" style="margin:6px 0 0">${esc(cls.meta.mentor || 'Your mentor')} · ${cls.members.length} student${cls.members.length===1?'':'s'} · code ${esc(cls.meta.code)}</p>
         </div>
-        <button class="btn primary" data-act="start-recommended">▶ Start recommended session</button>
+        <span class="pill ${openWork.length?'warn':'good'}">${openWork.length ? openWork.length + ' assignment' + (openWork.length===1?'':'s') + ' open' : 'all assignments done'}</span>
       </div>
     </div>
 
     <div class="grid g4" style="margin-top:16px">
-      <div class="stat"><div class="k">Studied today</div><div class="v">${fmtMin(studied)}</div><div class="s">target ${fmtMin(state.settings.dailyTargetMin)}</div></div>
-      <div class="stat"><div class="k">Planned today</div><div class="v">${planned ? fmtMin(planned) : '—'}</div><div class="s">${todays.length} task${todays.length===1?'':'s'} · ${todays.filter(x=>x.done).length} done</div></div>
-      <div class="stat"><div class="k">Cards due</div><div class="v">${due}</div><div class="s">active recall</div></div>
-      <div class="stat"><div class="k">Streak</div><div class="v">${streakDays()}d</div><div class="s">keep it alive 🔥</div></div>
+      <div class="stat"><div class="k">Assignments</div><div class="v">${openWork.length}</div><div class="s">${mineDone} of ${work.length} done</div></div>
+      <div class="stat"><div class="k">Tests to take</div><div class="v">${todo.length}</div><div class="s">${tests.length} published</div></div>
+      <div class="stat"><div class="k">Papers &amp; notes</div><div class="v">${classNotes().length}</div><div class="s">shared by your mentor</div></div>
+      <div class="stat"><div class="k">My test average</div><div class="v">${avg===null?'—':avg+'%'}</div><div class="s">${myMarks.length} submitted</div></div>
     </div>
 
-    ${classAssignmentsCard()}
-
-    <div style="margin-top:16px">
-      <div>
-        <div class="card">
-          <h2>This week's study time</h2>
-          <div class="chart">${chart}</div>
+    <div class="grid g2" style="margin-top:16px;gap:16px">
+      <div class="card">
+        <div class="row wrap" style="align-items:center"><h2 class="grow" style="margin:0">Subjects &amp; topics</h2>
+          <button class="btn sm ghost" data-act="nav" data-view="subjects">Open</button></div>
+        <div class="list" style="margin-top:8px">
+          ${subs.length ? subs.map(s => `<div class="item">
+            <span>📚</span>
+            <div class="grow"><div class="title">${esc(s.name)}</div>
+              <div class="uc-e">${(s.topics||[]).length} topic${(s.topics||[]).length===1?'':'s'} · ${subjectAssignments(s.id).length} assignment${subjectAssignments(s.id).length===1?'':'s'}</div></div>
+          </div>`).join('') : '<p class="sub" style="margin:4px 0">Your mentor has not added subjects yet.</p>'}
         </div>
-        <div class="card">
-          <div class="row wrap">
-            <h2 style="margin:0">Exam countdowns</h2>
-            <div style="flex:1"></div>
-            <button class="btn sm ghost" data-act="edit-exams" title="Shortcut: E">✎ Dates</button>
-          </div>
-          ${upcoming.length ? `<div class="list" style="margin-top:10px">${upcoming.map(s => {
-            const d = daysUntil(s.examDate); const p = topicProgress(s);
-            const urgency = d<=3 ? 'var(--red)' : d<=7 ? 'var(--amber)' : 'var(--green)';
-            return `<div class="item">
-              <span class="chip" style="background:${s.color}22;color:${s.color}">${esc(s.name)}</span>
-              <div class="grow">
-                <div class="bar"><i style="width:${p.pct}%;background:${s.color}"></i></div>
-                <div class="meta">syllabus ${p.pct}% · ${p.d}/${p.n} topics</div>
-              </div>
-              <b style="color:${urgency}">${d===0?'TODAY':d+'d'}</b>
-            </div>`;}).join('')}</div>`
-          : `<p class="sub">No upcoming exams. Set dates in <b>Subjects</b> — the planner and coach use them.</p>`}
-        </div>
-        ${dueCards.length ? `<div class="card">
-          <h2>Recall backlog</h2>
-          <div class="list" style="margin-top:10px">${dueCards.map(({deck,n,color,name})=>`
-            <div class="item"><span class="chip" style="background:${color}22;color:${color}">${esc(name)}</span>
-              <div class="grow">${esc(deck.name)}</div><b style="color:var(--amber)">${n} due</b>
-              <button class="btn sm primary" data-act="study-deck" data-id="${deck.id}">Study</button></div>`).join('')}</div>
-        </div>` : ''}
-        ${state.goals.length ? `<div class="card">
-          <h2>Goals</h2>
-          <div class="list" style="margin-top:10px">${state.goals.map(g=>`
-            <div class="item ${g.done?'done':''}">
-              <input type="checkbox" ${g.done?'checked':''} data-act="toggle-goal" data-id="${g.id}">
-              <div class="grow"><div class="title">${esc(g.text)}</div></div>
-              <button class="iconbtn" data-act="del-goal" data-id="${g.id}">✕</button>
-            </div>`).join('')}</div>
-        </div>` : ''}
       </div>
-    </div>`;
+      <div class="card">
+        <div class="row wrap" style="align-items:center"><h2 class="grow" style="margin:0">Class activity</h2>
+          <button class="btn sm ghost" data-act="nav" data-view="doubts">Doubt Solver</button></div>
+        <div style="margin-top:6px">${activityHtml(8)}</div>
+      </div>
+    </div>
+
+    ${work.length ? `<div class="card" style="margin-top:16px">
+      <h2>Assignments from your mentor</h2>
+      <div class="list" style="margin-top:10px">
+        ${work.map(a => `<div class="item ${assignmentDoneMine(a)?'done':''}">
+          <button class="iconbtn" data-act="class-assign-done" data-id="${a.id}" title="Mark done">${assignmentDoneMine(a)?'✅':'◻️'}</button>
+          <div class="grow"><div class="title">${esc(a.title)}</div>
+            <div class="uc-e">${a.subject ? esc(a.subject) + ' · ' : ''}${a.due ? 'due ' + fmtDay(a.due) : 'no due date'} · ${a.minutes}m</div></div>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}`;
 }
 
 function greeting(){ const h = new Date().getHours();
@@ -1605,54 +1655,77 @@ function taskRow(task){
    SUBJECTS & SYLLABUS
    ============================================================ */
 function renderSubjects(){
-  const p = $('#panel-subjects');
-  if (!state.subjects.length){
-    p.innerHTML = `
-      <div class="card"><h2>Subjects & Syllabus</h2>
-        <div class="empty" style="margin-top:12px"><div class="big">📚</div>
-          Add your first subject with its exam date.<br>The AI planner schedules topics by weight, confidence and time left.
-          <br><br><button class="btn primary" data-act="add-subject-modal">+ Add subject</button></div></div>`;
+  const p = $('#panel-subjects'); if (!p) return;
+  if (!cls){
+    p.innerHTML = `<div class="card"><h2>Subjects</h2>
+      <p class="sub">${isMentor() ? 'Your class is created with your mentor account — add the subjects you teach here.' : 'Join your mentor\'s class to see the subjects they hold, with their topics and assignments.'}</p>
+      ${isMentor() ? '' : joinClassCard()}</div>`;
     return;
   }
+  if (!isMentor() && !classReady()){
+    p.innerHTML = `<div class="card"><h2>Subjects</h2>
+      <p class="sub">Join your mentor's class with their code to see the subjects they hold.</p>
+      ${joinClassCard()}</div>`;
+    return;
+  }
+  const subs = classSubjectList();
+  const manage = isMentor();
   p.innerHTML = `
-    <div class="row" style="margin-bottom:16px">
-      <div class="grow"><h2 style="margin:0;font-size:16px">Subjects & Syllabus</h2>
-        <p class="sub" style="margin:2px 0 0">Progress bars track topics you've marked done. Difficulty + weight feed the AI planner.</p></div>
-      <button class="btn primary" data-act="add-subject-modal">+ Add subject</button>
+    <div class="row wrap" style="margin-bottom:16px;align-items:center;gap:8px">
+      <div class="grow"><h2 style="margin:0;font-size:16px">${manage ? 'Subjects you hold' : 'Subjects your mentor holds'}</h2>
+        <p class="sub" style="margin:2px 0 0">${manage
+          ? 'Add each subject you teach, its topics and the assignments for it — everything here appears in your students\' portal.'
+          : esc(cls.meta.mentor || 'Your mentor') + ' publishes these. Topics and assignments are read only for students.'}</p></div>
     </div>
-    ${state.subjects.map(s => {
-      const pr = topicProgress(s);
-      const d = daysUntil(s.examDate);
-      const urgency = d===null ? 'var(--muted)' : d<=3 ? 'var(--red)' : d<=7 ? 'var(--amber)' : 'var(--green)';
-      return `
-      <div class="card">
-        <div class="row wrap">
-          <span class="chip" style="background:${s.color}22;color:${s.color};font-size:13px;padding:5px 12px;cursor:pointer" data-act="subject-detail" data-id="${s.id}" title="View all data for ${esc(s.name)}">${esc(s.name)}</span>
-          <span class="pill" style="border-color:${urgency}55;color:${urgency}">
-            ${s.examDate ? `🎓 ${fmtDayShort(s.examDate)} · ${d<0? 'past' : d===0?'today':'in '+d+'d'}` : 'no exam date'}</span>
-          <span class="tag">weight ${s.weight}</span>
-          <span class="tag">confidence ${'●'.repeat(s.confidence)}${'○'.repeat(5-s.confidence)}</span>
+    ${manage ? `<div class="card" style="margin-bottom:16px">
+      <div class="row wrap" style="gap:6px;align-items:center">
+        <input class="cs-new" placeholder="Subject name — e.g. Mathematics" style="flex:1;min-width:200px">
+        <button class="btn primary" data-act="class-subject-add">＋ Add subject</button>
+      </div>
+    </div>` : ''}
+    ${subs.length ? subs.map(s => {
+      const work = subjectAssignments(s.id);
+      const topics = s.topics || [];
+      return `<div class="card" style="margin-bottom:16px">
+        <div class="row wrap" style="align-items:center;gap:8px">
+          <h2 style="margin:0;font-size:15px">📚 ${esc(s.name)}</h2>
+          <span class="tag">${topics.length} topic${topics.length===1?'':'s'}</span>
+          <span class="tag">${work.length} assignment${work.length===1?'':'s'}</span>
           <div style="flex:1"></div>
-          <button class="btn sm" data-act="add-topic" data-id="${s.id}">+ Topic</button>
-          <button class="btn sm ghost" data-act="edit-subject" data-id="${s.id}">✎ Edit</button>
-          <button class="btn sm danger" data-act="del-subject" data-id="${s.id}">Delete</button>
+          ${manage ? `<button class="btn sm danger" data-act="class-subject-del" data-id="${s.id}">Remove subject</button>` : ''}
         </div>
-        <div class="row" style="margin:12px 0 4px">
-          <div class="bar grow"><i style="width:${pr.pct}%;background:${s.color}"></i></div>
-          <b style="min-width:70px;text-align:right">${pr.pct}%</b>
-        </div>
-        <div class="sub" style="margin-bottom:10px">${pr.d} of ${pr.n} topics done${s.examDate && d>=0 && pr.n>pr.d ? ` · ~${Math.max(1, Math.ceil((pr.n-pr.d) * Math.max(s.weight,1) * 0.75 / Math.max(daysUntil(s.examDate),1)))} topic(s)/day needed` : ''}</div>
+        <div class="sub" style="margin:12px 0 4px;font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px">Topics</div>
         <div class="list">
-          ${s.topics.length ? [...s.topics].sort((a,b)=> a.done-b.done || a.difficulty-b.difficulty).map(t => `
-            <div class="item ${t.done?'done':''}">
-              <input type="checkbox" ${t.done?'checked':''} data-act="toggle-topic" data-sid="${s.id}" data-id="${t.id}">
-              <div class="grow"><div class="title">${esc(t.name)}</div></div>
-              <span class="tag">${DIFF_LABEL[t.difficulty]}</span>
-              <button class="iconbtn" data-act="del-topic" data-sid="${s.id}" data-id="${t.id}">✕</button>
-            </div>`).join('')
-          : '<p class="sub">No topics yet — add the syllabus items, or let the coach suggest a breakdown.</p>'}
+          ${topics.length ? topics.map(t => `<div class="item">
+            <span>•</span>
+            <div class="grow"><div class="title">${esc(t.name)}</div></div>
+            ${manage ? `<button class="iconbtn" data-act="class-topic-del" data-sid="${s.id}" data-id="${t.id}" title="Remove topic">✕</button>` : ''}
+          </div>`).join('') : '<p class="sub" style="margin:4px 0">No topics yet.</p>'}
         </div>
-      </div>`;}).join('')}`;
+        ${manage ? `<div class="row wrap" style="gap:6px;margin-top:8px">
+          <input class="ct-new" placeholder="New topic — e.g. Integration by parts" style="flex:1;min-width:180px">
+          <button class="btn sm" data-act="class-topic-add" data-id="${s.id}">＋ Topic</button>
+        </div>` : ''}
+        <div class="sub" style="margin:16px 0 4px;font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px">Assignments</div>
+        <div class="list">
+          ${work.length ? work.map(a => `<div class="item ${!manage && assignmentDoneMine(a) ? 'done' : ''}">
+            ${manage
+              ? `<span>📌</span><div class="grow"><div class="title">${esc(a.title)}</div>
+                   <div class="uc-e">${a.due ? 'due ' + fmtDay(a.due) : 'no due date'} · ${a.minutes}m · ${assignmentDoneCount(a)}/${cls.members.length} done</div></div>
+                 <button class="iconbtn" data-act="class-assign-del" data-id="${a.id}" title="Delete assignment">✕</button>`
+              : `<button class="iconbtn" data-act="class-assign-done" data-id="${a.id}" title="Mark done">${assignmentDoneMine(a)?'✅':'◻️'}</button>
+                 <div class="grow"><div class="title">${esc(a.title)}</div>
+                   <div class="uc-e">${a.due ? 'due ' + fmtDay(a.due) : 'no due date'} · ${a.minutes}m</div></div>`}
+          </div>`).join('') : '<p class="sub" style="margin:4px 0">No assignments for this subject yet.</p>'}
+        </div>
+        ${manage ? `<div class="row wrap" style="gap:6px;margin-top:8px">
+          <input class="sa-title" placeholder="Assignment title" style="flex:2;min-width:170px">
+          <input class="sa-due" type="date" style="flex:none">
+          <input class="sa-min" type="number" min="5" step="5" value="30" style="width:76px" title="Minutes">
+          <button class="btn sm primary" data-act="class-assign" data-sid="${s.id}">Assign</button>
+        </div>` : ''}
+      </div>`;
+    }).join('') : `<div class="card"><div class="empty"><div class="big">📚</div>${manage ? 'No subjects yet — add the first subject you teach above.' : 'Your mentor has not added any subjects yet.'}</div></div>`}`;
 }
 
 /* ============================================================
@@ -2620,112 +2693,21 @@ function solveDoubt(text, subjectId){
   return { subjectId: s ? s.id : null, q, a, tags: extractTags(q), solved:true };
 }
 function renderDoubts(){
-  const p = $('#panel-doubts');
-  if (dbTab === 'groups') return renderGroups(p);
-  if (dbTab === 'community') return renderCommunity(p);
-  const keepVals = {}; $$('.db-cin').forEach(ci => { if (ci.dataset.did && ci.value) keepVals[ci.dataset.did] = ci.value; });
-  state.doubts = state.doubts || [];
-  state.people = state.people || [];
-  const q = (dbFilter.q || '').toLowerCase();
-  const items = state.doubts
-    .filter(d => (dbFilter.subject==='all' || d.subjectId===dbFilter.subject)
-              && (dbFilter.state==='all' || (dbFilter.state==='solved' ? d.solved : !d.solved))
-              && (!q || (d.q + ' ' + (d.a||'') + ' ' + (d.notes||[]).map(n=>(n.text||'') + ' ' + ((n.poll||{}).q||'')).join(' ')).toLowerCase().includes(q)))
-    .sort((a,b)=>(b.created||0)-(a.created||0));
+  const p = $('#panel-doubts'); if (!p) return;
+  if (!cls || (!isMentor() && !classReady())){
+    p.innerHTML = `<div class="card"><h2>Doubt Solver</h2>
+      <p class="sub">${isMentor() ? 'Your class doubt board opens once students join with your code.' : 'Join your mentor\'s class to ask doubts — your mentor answers them here.'}</p>
+      ${isMentor() ? '' : joinClassCard()}</div>`;
+    return;
+  }
   p.innerHTML = `
     <div class="row" style="margin-bottom:16px">
       <div class="grow"><h2 style="margin:0;font-size:16px">Doubt Solver</h2>
-        <p class="sub" style="margin:2px 0 0">A WhatsApp-style class chat for every doubt — pick who's in, then message, send photos from the camera, create polls and react.</p></div>
-      <button class="btn primary" data-act="add-doubt-modal">＋ Ask a doubt</button>
+        <p class="sub" style="margin:2px 0 0">${isMentor()
+          ? 'Your students post their doubts here — answer them and the whole class can read the reply.'
+          : 'Ask your mentor directly. Every answer stays on the class board so you can revise it later.'}</p></div>
     </div>
-    ${classBoardHtml()}
-    ${dbTabBar()}
-    <div style="margin-bottom:14px"><input id="db-search" data-act="db-search" placeholder="Search your doubts…" value="${esc(dbFilter.q||'')}" style="width:100%"></div>
-    <input id="db-msgfile" type="file" accept="image/*" style="display:none">
-    ${items.length ? items.map(d => {
-      const s = subjById(d.subjectId); const col = s ? s.color : '#6c8cff';
-      const pNow = (state.people||[]).find(x=>x.id===dbPersona);
-      const ph = dbPersona==='teacher' ? 'Reply as teacher…' : (pNow ? ('Message as ' + pNow.name + '…') : 'Message the class…');
-      const ppl = (d.people||[]).map(pid => (state.people||[]).find(x=>x.id===pid)).filter(Boolean);
-      const pplHtml = ppl.length
-        ? ppl.map(p=>`<span class="tag">${p.role==='teacher'?'👩‍🏫':'🧑‍🎓'} ${esc(p.name)}</span>`).join('')
-        : '<span class="tag" style="color:var(--muted)">no one yet — add classmates & teachers</span>';
-      return `<div class="card db-card">
-        <div class="row wrap">
-          <span class="db-q grow">${esc(d.q)}</span>
-          ${d.solved ? '<span class="tag" style="color:var(--green)">✅ solved</span>' : '<span class="tag" style="color:var(--amber)">🔴 stuck</span>'}
-          <button class="btn sm ghost" data-act="toggle-doubt-solved" data-id="${d.id}">${d.solved ? 'Mark stuck' : 'Mark solved'}</button>
-          <button class="btn sm ghost" data-act="copy-doubt" data-id="${d.id}">⧉ Copy</button>
-          <button class="btn sm ghost" data-act="edit-doubt" data-id="${d.id}">✎ Edit</button>
-          <button class="btn sm danger" data-act="del-doubt" data-id="${d.id}">✕</button>
-        </div>
-        <div class="row wrap" style="gap:6px;margin-top:6px">
-          <span class="chip" style="background:${col}22;color:${col};padding:3px 10px;font-size:12px">${s?esc(s.name):'General'}</span>
-          ${(d.tags||[]).map(tg=>`<span class="tag">#${esc(tg)}</span>`).join('')}
-        </div>
-        <div class="row wrap" style="gap:5px;margin-top:6px;align-items:center">
-          <span class="tag" style="color:var(--muted)">👥</span>
-          ${pplHtml}
-          <button class="iconbtn" data-act="db-people-modal" data-id="${d.id}" title="Add / remove people" style="width:22px;height:22px;font-size:11px">＋</button>
-        </div>
-        <div class="db-thread">
-          <div class="db-msg q">
-            <div class="db-bubble">
-              <div class="db-bmeta"><span class="who">❓ Doubt</span><span>· ${timeAgo(d.created||Date.now())}</span></div>
-              <div style="font-weight:600;color:var(--text)">${esc(d.q)}</div>
-              ${d.qImg ? `<img class="db-bimg" src="${d.qImg}" data-act="db-img" alt="question photo" title="Click to enlarge">` : ''}
-            </div>
-          </div>
-          ${(d.myAns || d.myAnsImg) ? `<div class="db-msg me">
-            <div class="db-bubble">
-              <div class="db-bmeta"><span class="who">🙋 ${(user&&user.name)||'You'}</span><span>· written answer</span></div>
-              ${d.myAns ? `<div>${mdLite(d.myAns)}</div>` : ''}
-              ${d.myAnsImg ? `<img class="db-bimg" src="${d.myAnsImg}" data-act="db-img" alt="your answer" title="Click to enlarge">` : ''}
-            </div>
-            ${dbReactsRow(d, 'me')}
-          </div>` : ''}
-          ${(d.notes||[]).map(n=>dbMsgHtml(d,n)).join('')}
-        </div>
-        <div class="row" style="gap:6px;margin-top:8px">
-          <button class="btn sm ghost" data-act="db-answer-modal" data-id="${d.id}">${(d.myAns||d.myAnsImg) ? '✎ Edit your written answer' : '✍ Post a written answer'}</button>
-        </div>
-        ${(dbPendingImg && dbPendingImg.did===d.id) ? `<div class="db-pend"><img src="${dbPendingImg.img}" alt="attached photo"><span>Photo ready — add a caption or just send ➤</span><button class="iconbtn" data-act="db-pend-x" data-id="${d.id}" title="Remove photo">✕</button></div>` : ''}
-        ${dbEmojiOpen===d.id ? dbEmojiPopHtml() : ''}
-        <div class="db-inrow">
-          <button class="db-ebtn" data-act="db-persona" data-id="${d.id}" title="Switch who is sending: you → teacher → classmates">${dbPersona==='teacher'?'👩‍🏫':(pNow ? dbAvaHtml(pNow.name) : '🧑‍🎓')}</button>
-          <button class="db-ebtn" data-act="db-pick-msg" data-id="${d.id}" data-mode="cam" title="Take a photo with the camera">📷</button>
-          <button class="db-ebtn" data-act="db-pick-msg" data-id="${d.id}" data-mode="gal" title="Attach a photo">🖼️</button>
-          <button class="db-ebtn" data-act="db-poll-modal" data-id="${d.id}" title="Create a poll">📊</button>
-          <button class="db-ebtn${dbEmojiOpen===d.id?' act':''}" data-act="db-emoji-open" data-id="${d.id}" title="Emoji">😊</button>
-          <input class="db-cin" data-did="${d.id}" placeholder="${ph}" style="flex:1;min-width:70px">
-          <button class="btn sm" data-act="db-send" data-id="${d.id}" title="Send">➤</button>
-        </div>
-      </div>`;}).join('') : `
-      <div class="card"><div class="empty" style="margin-top:8px"><div class="big">🙋</div>
-        ${state.doubts.length ? 'No doubts match this filter.' : 'No doubts yet — the next time you are stuck, ask here instead of skipping it.'}
-        <br><br><button class="btn primary" data-act="add-doubt-modal">＋ Ask a doubt</button></div></div>`}`;
-  $$('.db-cin').forEach(ci => { const v = keepVals[ci.dataset.did]; if (v) ci.value = v; });
-  const inp = $('#db-search');
-  if (inp) inp.addEventListener('input', () => {
-    dbFilter.q = inp.value;
-    clearTimeout(dbSearchTimer);
-    dbSearchTimer = setTimeout(() => {   // render once the typing settles, not on every keystroke
-      renderDoubts();
-      const el2 = $('#db-search'); if (el2){ el2.focus(); el2.setSelectionRange(el2.value.length, el2.value.length); }
-    }, 140);
-  });
-  $$('.db-cin').forEach(ci => ci.addEventListener('keydown', e => {
-    if (e.key === 'Enter'){ e.preventDefault(); dbSendMsg(ci.dataset.did); }
-  }));
-  const mf = $('#db-msgfile');
-  if (mf) mf.addEventListener('change', async e => {
-    const f = e.target.files && e.target.files[0]; mf.value = '';
-    if (!f || !dbPendingTarget) return;
-    if (f.size > 8 * 1024 * 1024) return toast('Photo too large (max 8MB)');
-    const r = new FileReader();
-    r.onload = async () => { dbPendingImg = { did: dbPendingTarget, img: await dbShrinkImg(String(r.result)) }; renderDoubts(); };
-    r.readAsDataURL(f);
-  });
+    ${classBoardHtml(true)}`;
 }
 function doubtModal(editId){
   const it = editId ? (state.doubts||[]).find(x=>x.id===editId) : null;
@@ -4089,31 +4071,21 @@ function handleGoogleCredential(res){
    ============================================================ */
 let libFilter = { subject:'all', kind:'all' };
 function renderLibrary(){
-  const p = $('#panel-library');
-  state.library = state.library || [];
-  const items = state.library
-    .filter(i => (libFilter.subject==='all' || i.subjectId===libFilter.subject)
-              && (libFilter.kind==='all' || i.kind===libFilter.kind))
-    .sort((a,b)=>(b.updated||0)-(a.updated||0));
-  const kindBtn = (k, lbl) => `<button class="btn sm ${libFilter.kind===k?'':'ghost'}" data-act="lib-kind" data-kind="${k}">${lbl}</button>`;
-  const subjBtn = (sid, lbl) => `<button class="btn sm ${libFilter.subject===sid?'':'ghost'}" data-act="lib-subject" data-sid="${sid}">${esc(lbl)}</button>`;
+  const p = $('#panel-library'); if (!p) return;
+  if (!cls || (!isMentor() && !classReady())){
+    p.innerHTML = `<div class="card"><h2>Notes &amp; Previous Papers</h2>
+      <p class="sub">${isMentor() ? 'Share important notes and previous papers with your class from here.' : 'Join your mentor\'s class to read the notes and papers they share.'}</p>
+      ${isMentor() ? '' : joinClassCard()}</div>`;
+    return;
+  }
   p.innerHTML = `
     <div class="row" style="margin-bottom:16px">
       <div class="grow"><h2 style="margin:0;font-size:16px">Notes &amp; Previous Papers</h2>
-        <p class="sub" style="margin:2px 0 0">Your exam bank — paste important notes, question papers and solutions. Update them anytime.</p></div>
-      <button class="btn primary" data-act="add-library">＋ Add note / paper</button>
+        <p class="sub" style="margin:2px 0 0">${isMentor()
+          ? 'Add important notes and question papers — every student with your code can read them.'
+          : 'Shared by ' + esc(cls.meta.mentor || 'your mentor') + ' — read only. Students cannot add or remove these.'}</p></div>
     </div>
-    ${classLibraryHtml()}
-    <div class="row wrap" style="gap:6px;margin-bottom:14px">
-      ${kindBtn('all','All')}${kindBtn('note','📝 Notes')}${kindBtn('paper','📄 Papers')}
-      <span style="width:10px"></span>
-      ${subjBtn('all','All subjects')}
-      ${state.subjects.map(s=>subjBtn(s.id, s.name)).join('')}
-    </div>
-    ${items.length ? items.map(libCard).join('') : `
-      <div class="card"><div class="empty" style="margin-top:8px"><div class="big">🗂️</div>
-        Nothing here yet — add important notes or previous papers.<br>They stay on this device and you can update them anytime.
-        <br><br><button class="btn primary" data-act="add-library">＋ Add note / paper</button></div></div>`}`;
+    ${classLibraryHtml()}`;
 }
 function libCard(i){
   const s = subjById(i.subjectId); const col = s ? s.color : '#6c8cff';
